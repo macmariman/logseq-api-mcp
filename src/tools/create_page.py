@@ -4,30 +4,48 @@ from typing import Any, Dict, List, Optional
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import load_config
+from src.client.config import LogseqConfig, load_config
+from src.parser.markdown import parse_content
 
 
 async def _run(
     client: LogseqClient,
+    config: LogseqConfig,
     page_name: str,
     properties: Optional[Dict[str, Any]] = None,
     fmt: Optional[str] = None,
+    content: Optional[str] = None,
 ) -> List[TextContent]:
-    """Create a page using an injected client.
+    """Create a page using an injected client, optionally inserting parsed content.
 
     Args:
         client: LogseqClient instance.
+        config: LogseqConfig (reserved for future use).
         page_name: The name of the page to create.
         properties: Optional page-level properties dict.
         fmt: Optional format string ('markdown' or 'org').
+        content: Optional markdown string; parsed and inserted as blocks.
 
     Returns:
         List with one TextContent describing the result.
 
-    Complexity: O(1).
+    Complexity: O(B) where B is parsed block count.
     """
     try:
-        result = await client.create_page(page_name, properties=properties, fmt=fmt)
+        merged_props = dict(properties or {})
+        batch_blocks: list[dict] = []
+
+        if content and content.strip():
+            parsed = parse_content(content)
+            if parsed.properties:
+                merged_props = {**parsed.properties, **merged_props}
+            batch_blocks = parsed.to_batch_format()
+
+        result = await client.create_page(
+            page_name,
+            properties=merged_props or None,
+            fmt=fmt,
+        )
 
         if not result:
             return [TextContent(type="text", text="❌ Failed to create page: No response from Logseq API")]
@@ -59,10 +77,16 @@ async def _run(
                     "",
                 ])
 
-        if properties:
-            lines.append(f"⚙️ Properties set: {len(properties)} items")
+        if merged_props:
+            lines.append(f"⚙️ Properties set: {len(merged_props)} items")
         if fmt:
             lines.append(f"📝 Format: {fmt}")
+
+        if batch_blocks:
+            page_uuid = result.get("uuid") if isinstance(result, dict) else None
+            if page_uuid:
+                await client.insert_batch_block(page_uuid, batch_blocks, sibling=False)
+            lines.append(f"📝 Content blocks inserted: {len(batch_blocks)}")
 
         return [TextContent(type="text", text="\n".join(lines))]
 
@@ -74,17 +98,20 @@ async def create_page(
     page_name: str,
     properties: Optional[Dict[str, Any]] = None,
     format: Optional[str] = None,
+    content: Optional[str] = None,
 ) -> List[TextContent]:
-    """Create a new page in Logseq.
+    """Create a new page in Logseq with optional markdown content.
 
     Args:
         page_name: The name of the page to create.
         properties: Optional dictionary of properties to set on the page.
         format: Optional format for the page ('markdown' or 'org').
+        content: Optional markdown content; parsed into blocks and inserted.
 
     Returns:
         List with one TextContent describing success or failure.
 
-    Complexity: O(1).
+    Complexity: O(B) where B is parsed block count.
     """
-    return await _run(LogseqClient(load_config()), page_name, properties, format)
+    cfg = load_config()
+    return await _run(LogseqClient(cfg), cfg, page_name, properties, format, content)
