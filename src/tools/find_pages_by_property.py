@@ -6,6 +6,7 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
+from src.privacy.exclude_tags import filter_pages
 
 _VALID_PROP_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
@@ -45,6 +46,16 @@ async def _run(
             dsl_query = f"[:find (pull ?p [*]) :where [?p :{property_name} _]]"
 
         items = await client.query_dsl(dsl_query)
+
+        if config.exclude_tags:
+            all_pages = await client.get_all_pages()
+            visible = filter_pages(all_pages, config.exclude_tags)
+            visible_names = {(p.get("name") or "").lower() for p in visible}
+            items = [
+                it for it in items
+                if (it.get("name") or it.get("originalName") or "").lower() in visible_names
+            ]
+
         items = items[:limit]
 
         lines = [

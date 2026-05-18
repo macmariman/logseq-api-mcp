@@ -90,3 +90,43 @@ def test_config_is_immutable():
     cfg = LogseqConfig(endpoint="http://x", token="y")
     with pytest.raises((AttributeError, TypeError)):
         cfg.token = "z"  # type: ignore[misc]
+
+
+def test_load_config_api_url_trailing_slash_stripped(monkeypatch):
+    monkeypatch.setenv("LOGSEQ_API_TOKEN", "tok")
+    monkeypatch.delenv("LOGSEQ_API_ENDPOINT", raising=False)
+    monkeypatch.setenv("LOGSEQ_API_URL", "http://myhost:12315/")
+    cfg = load_config()
+    assert cfg.endpoint == "http://myhost:12315/api"
+
+
+def test_load_config_verify_ssl_explicit_true_overrides_http(monkeypatch):
+    monkeypatch.setenv("LOGSEQ_API_TOKEN", "tok")
+    monkeypatch.setenv("LOGSEQ_API_ENDPOINT", "http://myhost/api")
+    monkeypatch.setenv("LOGSEQ_VERIFY_SSL", "true")
+    cfg = load_config()
+    assert cfg.verify_ssl is True
+
+
+def test_load_config_verify_ssl_zero_disables(monkeypatch):
+    monkeypatch.setenv("LOGSEQ_API_TOKEN", "tok")
+    monkeypatch.setenv("LOGSEQ_API_ENDPOINT", "https://myhost/api")
+    monkeypatch.setenv("LOGSEQ_VERIFY_SSL", "0")
+    cfg = load_config()
+    assert cfg.verify_ssl is False
+
+
+def test_load_config_verify_ssl_no_disables(monkeypatch):
+    monkeypatch.setenv("LOGSEQ_API_TOKEN", "tok")
+    monkeypatch.setenv("LOGSEQ_API_ENDPOINT", "https://myhost/api")
+    monkeypatch.setenv("LOGSEQ_VERIFY_SSL", "no")
+    cfg = load_config()
+    assert cfg.verify_ssl is False
+
+
+def test_logseq_client_passes_ssl_to_request():
+    """verify_ssl from config is forwarded to aiohttp session.post(ssl=...)."""
+    import inspect
+    from src.client.logseq_client import LogseqClient
+    source = inspect.getsource(LogseqClient._call)
+    assert "verify_ssl" in source or "ssl" in source

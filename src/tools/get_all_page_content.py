@@ -6,6 +6,7 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
+from src.privacy.exclude_tags import is_page_excluded
 from src.tools.formatters.blocks import collect_block_uuids, format_block_tree
 
 
@@ -38,6 +39,12 @@ async def _run(
 
         if not page and not blocks:
             return [TextContent(type="text", text=f"❌ Page '{page_identifier}' not found")]
+
+        if config.exclude_tags and page and is_page_excluded(page, config.exclude_tags):
+            return [TextContent(
+                type="text",
+                text=f"❌ Access denied: page '{page_identifier}' is excluded by tag policy"
+            )]
 
         page_name = (page or {}).get("originalName") or (page or {}).get("name", page_identifier)
         page_id = (page or {}).get("id", "N/A")

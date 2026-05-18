@@ -5,6 +5,7 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
+from src.privacy.exclude_tags import filter_pages
 from src.tools.formatters.pages import format_timestamp
 
 
@@ -84,6 +85,8 @@ async def _run(
             return [TextContent(type="text", text=f"✅ No pages link to '{page_identifier}'")]
 
         all_pages = await client.get_all_pages()
+        visible_pages = filter_pages(all_pages, config.exclude_tags) if config.exclude_tags else all_pages
+        visible_ids = {p.get("id") for p in visible_pages if isinstance(p, dict) and p.get("id")}
         page_lookup = {
             p.get("id"): p for p in all_pages if isinstance(p, dict) and p.get("id")
         }
@@ -94,6 +97,8 @@ async def _run(
                 continue
             page_ref = group[0]
             if not isinstance(page_ref, dict):
+                continue
+            if config.exclude_tags and page_ref.get("id") not in visible_ids:
                 continue
             ref_blocks = [b for b in group[1:] if isinstance(b, dict)]
             enriched.append({
