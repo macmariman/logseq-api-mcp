@@ -1,85 +1,44 @@
 """Tests for get_page_blocks tool."""
 
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
-
-from src.tools.get_page_blocks import get_page_blocks
+from tests.conftest import FakeLogseqClient
+from src.tools.get_page_blocks import _run
 
 
 class TestGetPageBlocks:
-    """Test cases for get_page_blocks function."""
-
-    @pytest.mark.asyncio
-    async def test_get_page_blocks_success(
-        self, mock_env_vars, mock_aiohttp_session, sample_block_data
-    ):
-        """Test successful page blocks retrieval."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=[sample_block_data])
-
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
-
-        result = await get_page_blocks("Test Page")
-
+    async def test_returns_tree_structure(self, sample_block_data):
+        client = FakeLogseqClient({"get_page_blocks_tree": [sample_block_data]})
+        result = await _run(client, "My Page")
         assert len(result) == 1
-        assert "🌳 **PAGE BLOCKS TREE STRUCTURE**" in result[0].text
-        assert "Test Page" in result[0].text
+        assert "PAGE BLOCKS TREE STRUCTURE" in result[0].text
+        assert "Test block content" in result[0].text
 
-    @pytest.mark.asyncio
-    async def test_get_page_blocks_empty(self, mock_env_vars, mock_aiohttp_session):
-        """Test page blocks retrieval with empty result."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=[])
+    async def test_empty_page(self):
+        client = FakeLogseqClient({"get_page_blocks_tree": []})
+        result = await _run(client, "Empty Page")
+        assert "has no blocks" in result[0].text
 
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+    async def test_block_count_shown(self, sample_block_data):
+        blocks = [sample_block_data, {**sample_block_data, "id": 2, "uuid": "b"}]
+        client = FakeLogseqClient({"get_page_blocks_tree": blocks})
+        result = await _run(client, "My Page")
+        assert "Total blocks: 2" in result[0].text
 
-        result = await get_page_blocks("Test Page")
+    async def test_nested_children_shown(self):
+        blocks = [{
+            "id": 1, "uuid": "p", "content": "Parent block",
+            "level": 1, "page": {"id": 1, "name": "P"}, "properties": {}, "children": [
+                {"id": 2, "uuid": "c", "content": "Child block", "level": 2, "children": []}
+            ]
+        }]
+        client = FakeLogseqClient({"get_page_blocks_tree": blocks})
+        result = await _run(client, "My Page")
+        assert "Parent block" in result[0].text
+        assert "Child block" in result[0].text
 
-        assert len(result) == 1
-        assert "✅ Page 'Test Page' has no blocks" in result[0].text
+    async def test_exception_returns_error(self):
+        class ErrorClient(FakeLogseqClient):
+            async def get_page_blocks_tree(self, page_identifier):
+                raise RuntimeError("API down")
 
-    @pytest.mark.asyncio
-    async def test_get_page_blocks_http_error(
-        self, mock_env_vars, mock_aiohttp_session
-    ):
-        """Test page blocks retrieval with HTTP error."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 500
-
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
-
-        result = await get_page_blocks("Test Page")
-
-        assert len(result) == 1
-        assert "❌ Failed to fetch page blocks: HTTP 500" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_get_page_blocks_exception(self, mock_env_vars, mock_aiohttp_session):
-        """Test page blocks retrieval with exception."""
-        # Setup session mock to raise exception
-        mock_aiohttp_session._session_instance.post.side_effect = Exception(
-            "Network error"
-        )
-
-        result = await get_page_blocks("Test Page")
-
-        assert len(result) == 1
-        assert "❌ Error fetching page blocks: Network error" in result[0].text
+        result = await _run(ErrorClient(), "My Page")
+        assert "❌ Error fetching page blocks: API down" in result[0].text
