@@ -84,8 +84,8 @@ jobs:
       - name: Check for vulnerable dependencies
         run: |
           echo "🔍 Checking for vulnerable dependencies..."
-          uv run safety check --json --save-json safety-report.json || true
-          uv run safety check
+          uv run pip-audit --format=json --output=pip-audit-report.json || true
+          uv run pip-audit
 
       - name: Check dependency licenses
         run: |
@@ -99,7 +99,7 @@ jobs:
         with:
           name: dependency-reports
           path: |
-            safety-report.json
+            pip-audit-report.json
             licenses.json
 
   performance-test:
