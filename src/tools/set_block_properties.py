@@ -41,7 +41,9 @@ async def _run(
             return [TextContent(type="text", text=f"❌ Block '{block_uuid}' not found")]
 
         for key, value in properties.items():
-            await client.upsert_block_property(block_uuid, key, value)
+            ident = await client.resolve_property_ident(key)
+            resolved_key = ident if ident is not None else key
+            await client.upsert_block_property(block_uuid, resolved_key, value)
 
         lines = [
             f"✅ Properties set on block '{block_uuid}'",
