@@ -1,6 +1,6 @@
 # logseq-api-mcp
 
-**Your AI assistant starts every session blind to your Logseq knowledge graph. logseq-api-mcp fixes that: 22 tools to read, write, query, and search your notes — auto-registered the moment you drop a Python file into `src/tools/`.**
+**Your AI assistant starts every session blind to your Logseq knowledge graph. logseq-api-mcp fixes that: 21 tools to read, write, query, and search your notes — auto-registered the moment you drop a Python file into `src/tools/`.**
 
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
@@ -12,7 +12,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/architecture-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/architecture-light.svg">
-  <img src="assets/architecture-light.svg" alt="Architecture: AI Client → logseq-api-mcp (22 tools, privacy, vector search) → Logseq API → Knowledge Graph" width="960">
+  <img src="assets/architecture-light.svg" alt="Architecture: AI Client → logseq-api-mcp (21 tools, privacy) → Logseq API → Knowledge Graph" width="960">
 </picture>
 
 ---
@@ -54,7 +54,7 @@ Getting your token: open Logseq, go to **Settings → Features → Developer mod
 }
 ```
 
-Restart Claude Desktop. All 22 tools are live.
+Restart Claude Desktop. All 21 tools are live.
 
 ---
 
@@ -92,15 +92,6 @@ Restart Claude Desktop. All 22 tools are live.
 | `delete_block` | Delete a block by UUID |
 | `set_block_properties` | Set structured properties on a block (DB-mode only) |
 
-### Optional: Vector Search
-
-Requires `uv sync --group vector` and `LOGSEQ_VECTOR_ENABLED=true`.
-
-| Tool | What it does |
-|---|---|
-| `vector_search` | Semantic similarity search across all synced blocks |
-| `vector_db_status` | Reports DB path, document count, and sync state |
-
 ---
 
 ## Configuration
@@ -113,9 +104,6 @@ Requires `uv sync --group vector` and `LOGSEQ_VECTOR_ENABLED=true`.
 | `LOGSEQ_DB_MODE` | `false` | Enable Logseq database-format API paths |
 | `LOGSEQ_EXCLUDE_TAGS` | *(empty)* | Comma-separated tags — pages with any tag are hidden |
 | `LOGSEQ_LOG_LEVEL` | `WARNING` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `LOGSEQ_VECTOR_ENABLED` | `false` | Set `true` to activate vector search tools |
-| `LOGSEQ_VECTOR_PATH` | `~/.cache/logseq-api-mcp/vector_db` | LanceDB storage directory |
-| `LOGSEQ_GRAPH_PATH` | `~/logseq` | Graph root directory for vector sync |
 
 ---
 
@@ -137,27 +125,6 @@ Any page tagged with a tag from `LOGSEQ_EXCLUDE_TAGS` disappears from every read
 | `find_pages_by_property` | Results post-filtered |
 | `get_page_backlinks` | Excluded source pages removed |
 | `get_all_page_content` | Returns `❌ Access denied` for the excluded page |
-
----
-
-## Vector Search
-
-```bash
-# Install vector extras
-uv sync --group vector
-
-# Point at your graph and enable
-export LOGSEQ_VECTOR_ENABLED=true
-export LOGSEQ_GRAPH_PATH=/path/to/your/logseq/graph
-
-# Build the index
-uv run logseq-sync --once
-
-# Or run a file-watching daemon
-uv run logseq-sync
-```
-
-Once synced, `vector_search` and `vector_db_status` appear automatically in your MCP client.
 
 ---
 

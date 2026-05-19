@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Model Context Protocol (MCP) server** that gives AI assistants access to Logseq knowledge bases. It ships **22 standard tools** (read + write) and 2 optional vector-search tools, all discovered and registered automatically.
+This is a **Model Context Protocol (MCP) server** that gives AI assistants access to Logseq knowledge bases. It ships **21 standard tools** (read + write), all discovered and registered automatically.
 
 **Key Innovation**: Zero-configuration tool management — drop a `.py` file into `src/tools/` and it is auto-discovered, imported, and registered with the MCP server.
 
@@ -15,7 +15,7 @@ This is a **Model Context Protocol (MCP) server** that gives AI assistants acces
 ```
 src/
 ├── server.py          # FastMCP entry point; calls setup_logging() + register_all_tools()
-├── registry.py        # Iterates tools.__all__; conditionally adds vector tools
+├── registry.py        # Iterates tools.__all__ and registers each with the MCP server
 ├── logging_setup.py   # setup_logging() rotating-file logger; get_logger() child logger
 ├── client/
 │   ├── logseq_client.py   # LogseqClient — async aiohttp wrapper for every Logseq API call
@@ -25,16 +25,10 @@ src/
 │   └── markdown.py        # parse_content(text) → ParsedContent(blocks, properties)
 ├── privacy/
 │   └── exclude_tags.py    # filter_pages(), is_page_excluded(), extract_tags()
-├── tools/
-│   ├── __init__.py        # Scans *.py, imports each, adds public functions to __all__
-│   ├── formatters/        # Pure formatter functions (pages.py, blocks.py, search.py)
-│   └── *.py               # 22 tool modules — one public async function each
-└── vector/
-    ├── __init__.py        # VECTOR_AVAILABLE = True/False (safe lancedb import)
-    ├── config.py          # VectorConfig dataclass; load_vector_config()
-    ├── sync.py            # sync_graph(), watch_graph(), cli_entry()
-    ├── search.py          # vector_search() MCP tool
-    └── status.py          # vector_db_status() MCP tool
+└── tools/
+    ├── __init__.py        # Scans *.py, imports each, adds public functions to __all__
+    ├── formatters/        # Pure formatter functions (pages.py, blocks.py, search.py)
+    └── *.py               # 21 tool modules — one public async function each
 ```
 
 ### Dynamic Tool Discovery
@@ -42,7 +36,6 @@ src/
 1. `src/tools/__init__.py` uses `importlib` to import every `*.py` file in `src/tools/` (skipping `_*` and `formatters/`).
 2. It adds any function where `obj.__module__ == module.__name__` to `__all__`.
 3. `src/registry.py` iterates `tools.__all__` and calls `mcp_server.tool()(fn)` for each.
-4. When `VECTOR_AVAILABLE` is `True` and `load_vector_config()` is not `None`, `vector_search` and `vector_db_status` are also registered.
 
 **Critical rule**: A tool function must be **defined in its own file** — not imported from another module — for dynamic discovery to pick it up.
 
@@ -95,9 +88,6 @@ uv sync
 # Install with dev tools (mypy, ruff, bandit, etc.)
 uv sync --dev
 
-# Install with vector extras
-uv sync --group vector
-
 # Run test suite
 uv run --group test pytest tests/ -v
 
@@ -118,9 +108,6 @@ uv run mcp run src/server.py
 
 # Dev mode with MCP Inspector
 uv run mcp dev src/server.py
-
-# One-shot vector sync
-uv run logseq-sync --once
 ```
 
 ## Adding New Tools
@@ -214,7 +201,6 @@ class FakeLogseqClient(LogseqClient):
 | `tests/parser/` | `parse_content()` and `BlockNode` | None (pure functions) |
 | `tests/privacy/` | `filter_pages()`, tool-level exclusion | `FakeLogseqClient` |
 | `tests/tools/` | Individual tool `_run()` functions | `FakeLogseqClient` |
-| `tests/vector/` | VectorConfig, sync, search, status | `unittest.mock.patch` on lancedb |
 
 ### TDD Invariants
 
@@ -233,9 +219,6 @@ class FakeLogseqClient(LogseqClient):
 | `LOGSEQ_DB_MODE` | `false` | Enable Logseq database-format API paths |
 | `LOGSEQ_EXCLUDE_TAGS` | *(empty)* | Comma-separated tags; pages tagged with any are hidden |
 | `LOGSEQ_LOG_LEVEL` | `WARNING` | Python log level for `logseq_mcp.*` logger |
-| `LOGSEQ_VECTOR_ENABLED` | `false` | Enable vector search tools |
-| `LOGSEQ_VECTOR_PATH` | `~/.cache/logseq-api-mcp/vector_db` | LanceDB directory |
-| `LOGSEQ_GRAPH_PATH` | `~/logseq` | Logseq markdown graph root for vector sync |
 
 ## Key Dependencies
 
@@ -248,5 +231,3 @@ class FakeLogseqClient(LogseqClient):
 | `mypy` (dev) | Static type checking |
 | `bandit` (dev) | Security linting |
 | `pytest` + `pytest-asyncio` (test) | Test runner with async support |
-| `lancedb` (vector) | Vector database for semantic search |
-| `watchdog` (vector) | File-system watcher for graph sync |
