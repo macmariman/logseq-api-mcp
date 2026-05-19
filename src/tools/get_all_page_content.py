@@ -5,7 +5,7 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.privacy.exclude_tags import is_page_excluded
 from src.tools.formatters.blocks import collect_block_uuids, format_block_tree
 from src.logging_setup import get_logger
@@ -14,7 +14,7 @@ from src.logging_setup import get_logger
 _log = get_logger(__name__)
 
 
-async def _run(
+async def get_all_page_content(
     client: LogseqClient,
     config: LogseqConfig,
     page_identifier: str,
@@ -22,15 +22,15 @@ async def _run(
     max_depth: int = -1,
     resolve_refs: bool = True,
 ) -> List[TextContent]:
-    """Fetch and format full page content using an injected client.
+    """Get comprehensive page content including all blocks and their full content.
 
     Args:
-        client: LogseqClient instance.
-        config: LogseqConfig (provides db_mode flag).
-        page_identifier: The name or UUID of the page to get content from.
+        client: LogseqClient instance (injected by the registry).
+        config: LogseqConfig (provides db_mode flag and exclude_tags).
+        page_identifier: The name or UUID of the page to get complete content from.
         fmt: Output format — "text" (default) or "json".
         max_depth: Maximum block nesting depth; -1 means unlimited.
-        resolve_refs: When True and db_mode, resolve UUID references to page names.
+        resolve_refs: When True and db_mode is enabled, resolve UUID block refs to names.
 
     Returns:
         List with one TextContent containing the full page content.
@@ -119,28 +119,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching page content: {exc}")]
-
-
-async def get_all_page_content(
-    page_identifier: str,
-    fmt: str = "text",
-    max_depth: int = -1,
-    resolve_refs: bool = True,
-) -> List[TextContent]:
-    """Get comprehensive page content including all blocks and their full content.
-
-    Args:
-        page_identifier: The name or UUID of the page to get complete content from.
-        fmt: Output format — "text" (default) or "json".
-        max_depth: Maximum block nesting depth; -1 means unlimited.
-        resolve_refs: When True and db_mode is enabled, resolve UUID block refs to names.
-
-    Returns:
-        List with one TextContent containing the full page content.
-
-    Complexity: O(N) where N is total block count.
-    """
-    cfg = load_config()
-    return await _run(
-        LogseqClient(cfg), cfg, page_identifier, fmt, max_depth, resolve_refs
-    )

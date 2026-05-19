@@ -28,7 +28,7 @@ _cfg_open = LogseqConfig("http://x", "t")
 
 class TestGetAllPagesExclusion:
     async def test_excluded_page_absent_from_listing(self):
-        from src.tools.get_all_pages import _run
+        from src.tools.get_all_pages import get_all_pages as _run
 
         client = FakeLogseqClient({"get_all_pages": [_PUBLIC, _SECRET]})
         result = await _run(client, _cfg_excl)
@@ -109,7 +109,7 @@ class TestFindPagesByPropertyExclusion:
 
 class TestGetAllPageContentExclusion:
     async def test_excluded_target_page_returns_access_denied(self):
-        from src.tools.get_all_page_content import _run
+        from src.tools.get_all_page_content import get_all_page_content as _run
 
         client = FakeLogseqClient(
             {
@@ -127,7 +127,7 @@ class TestGetAllPageContentExclusion:
         )
 
     async def test_non_excluded_page_accessible(self):
-        from src.tools.get_all_page_content import _run
+        from src.tools.get_all_page_content import get_all_page_content as _run
 
         client = FakeLogseqClient(
             {
@@ -145,7 +145,7 @@ class TestGetAllPageContentExclusion:
 
 class TestGetPageBacklinksExclusion:
     async def test_excluded_source_page_absent_from_backlinks(self):
-        from src.tools.get_page_backlinks import _run
+        from src.tools.get_page_backlinks import get_page_backlinks as _run
 
         linked_refs = [
             [

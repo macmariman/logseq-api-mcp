@@ -56,7 +56,7 @@ class TestToolLogging:
 
         from src.client.config import LogseqConfig
         from tests.conftest import FakeLogseqClient
-        from src.tools.get_all_pages import _run
+        from src.tools.get_all_pages import get_all_pages as _run
 
         client = FakeLogseqClient({"get_all_pages": []})
         cfg = LogseqConfig("http://x", "t")
@@ -71,7 +71,7 @@ class TestToolLogging:
 
         from src.client.config import LogseqConfig
         from tests.conftest import FakeLogseqClient
-        from src.tools.get_all_pages import _run
+        from src.tools.get_all_pages import get_all_pages as _run
 
         class BrokenClient(FakeLogseqClient):
             async def get_all_pages(self):

@@ -16,7 +16,7 @@ _cfg = LogseqConfig("http://x", "t", db_mode=False)
 
 class TestGetAllPageContentDbMode:
     async def test_resolve_refs_true_calls_resolve_page_uuids(self):
-        from src.tools.get_all_page_content import _run
+        from src.tools.get_all_page_content import get_all_page_content as _run
 
         _uuid = "12345678-1234-1234-1234-123456789012"
         page = {
@@ -47,7 +47,7 @@ class TestGetAllPageContentDbMode:
         assert any(c[0] == "resolve_page_uuids" for c in client.calls)
 
     async def test_resolve_refs_false_skips_uuid_resolution(self):
-        from src.tools.get_all_page_content import _run
+        from src.tools.get_all_page_content import get_all_page_content as _run
 
         page = {
             "id": 1,
@@ -63,7 +63,7 @@ class TestGetAllPageContentDbMode:
         assert not any(c[0] == "resolve_page_uuids" for c in client.calls)
 
     async def test_non_db_mode_skips_uuid_resolution(self):
-        from src.tools.get_all_page_content import _run
+        from src.tools.get_all_page_content import get_all_page_content as _run
 
         page = {
             "id": 1,
@@ -84,7 +84,7 @@ class TestGetAllPageContentDbMode:
 
 class TestGetBlockContentDbMode:
     async def test_db_mode_calls_get_blocks_db_properties(self):
-        from src.tools.get_block_content import _run
+        from src.tools.get_block_content import get_block_content as _run
 
         block = {
             "id": 1,
@@ -105,7 +105,7 @@ class TestGetBlockContentDbMode:
         assert "priority" in result[0].text
 
     async def test_non_db_mode_skips_db_properties(self):
-        from src.tools.get_block_content import _run
+        from src.tools.get_block_content import get_block_content as _run
 
         block = {
             "id": 1,

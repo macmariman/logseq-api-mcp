@@ -5,7 +5,7 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.tools.formatters.blocks import format_block_detail
 from src.logging_setup import get_logger
 
@@ -13,21 +13,24 @@ from src.logging_setup import get_logger
 _log = get_logger(__name__)
 
 
-async def _run(
+async def get_block_content(
     client: LogseqClient,
     config: LogseqConfig,
     block_uuid: str,
     fmt: str = "text",
     include_children: bool = True,
 ) -> List[TextContent]:
-    """Fetch and format block details using an injected client.
+    """Get detailed content and metadata for a specific block using its UUID.
+
+    Returns comprehensive block information including properties, relationships,
+    and content, formatted for optimal LLM consumption.
 
     Args:
-        client: LogseqClient instance.
+        client: LogseqClient instance (injected by the registry).
         config: LogseqConfig (provides db_mode flag).
         block_uuid: The UUID of the block to retrieve.
         fmt: Output format — "text" (default) or "json".
-        include_children: When False, children are not fetched from Logseq.
+        include_children: When False, child blocks are excluded from the result.
 
     Returns:
         List with one TextContent containing block details.
@@ -80,27 +83,3 @@ async def _run(
         return [
             TextContent(type="text", text=f"❌ Error fetching block content: {exc}")
         ]
-
-
-async def get_block_content(
-    block_uuid: str,
-    fmt: str = "text",
-    include_children: bool = True,
-) -> List[TextContent]:
-    """Get detailed content and metadata for a specific block using its UUID.
-
-    Returns comprehensive block information including properties, relationships,
-    and content, formatted for optimal LLM consumption.
-
-    Args:
-        block_uuid: The UUID of the block to retrieve.
-        fmt: Output format — "text" (default) or "json".
-        include_children: When False, child blocks are excluded from the result.
-
-    Returns:
-        List with one TextContent containing block details.
-
-    Complexity: O(C) where C is child count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, block_uuid, fmt, include_children)

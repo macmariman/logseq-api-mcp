@@ -4,7 +4,7 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.privacy.exclude_tags import filter_pages
 from src.tools.formatters.pages import format_timestamp
 from src.logging_setup import get_logger
@@ -64,19 +64,19 @@ def _format_linking_page(
 _log = get_logger(__name__)
 
 
-async def _run(
+async def get_page_backlinks(
     client: LogseqClient,
     config: LogseqConfig,
     page_identifier: str,
     include_content: bool = True,
 ) -> List[TextContent]:
-    """Fetch and format backlinks using an injected client.
+    """Get pages that link to the specified page with comprehensive metadata.
 
     Args:
-        client: LogseqClient instance.
-        config: LogseqConfig (reserved for future privacy filtering).
-        page_identifier: The name or UUID of the target page.
-        include_content: When True, show the content of each referencing block.
+        client: LogseqClient instance (injected by the registry).
+        config: LogseqConfig (provides exclude_tags for privacy filtering).
+        page_identifier: The name or UUID of the page to find backlinks for.
+        include_content: When True, include the text of each referencing block.
 
     Returns:
         List with one TextContent containing the backlink analysis.
@@ -164,22 +164,3 @@ async def _run(
         return [
             TextContent(type="text", text=f"❌ Error fetching page backlinks: {exc}")
         ]
-
-
-async def get_page_backlinks(
-    page_identifier: str,
-    include_content: bool = True,
-) -> List[TextContent]:
-    """Get pages that link to the specified page with comprehensive metadata.
-
-    Args:
-        page_identifier: The name or UUID of the page to find backlinks for.
-        include_content: When True, include the text of each referencing block.
-
-    Returns:
-        List with one TextContent containing the backlink analysis.
-
-    Complexity: O(P + R) where P is page count, R is reference count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, page_identifier, include_content)
