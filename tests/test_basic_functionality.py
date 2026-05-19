@@ -2,18 +2,11 @@
 
 from unittest.mock import patch
 
-import pytest
-
-pytest.skip(
-    "rewritten in C1 — server.py still calls register_all_tools(mcp) "
-    "with one argument; suite re-enabled after C1 wires client/config",
-    allow_module_level=True,
-)
-
-
-from src.registry import register_all_tools  # noqa: E402
-from src.server import mcp  # noqa: E402
-from src.tools.get_all_pages import get_all_pages  # noqa: E402
+from src.client.config import LogseqConfig
+from src.client.logseq_client import LogseqClient
+from src.registry import register_all_tools
+from src.server import mcp
+from src.tools.get_all_pages import get_all_pages
 
 
 class TestBasicFunctionality:
@@ -52,7 +45,9 @@ class TestBasicFunctionality:
     def test_tool_registration_doesnt_crash(self):
         """Test that tool registration doesn't crash."""
         # This should not raise any exceptions
-        register_all_tools(mcp)
+        cfg = LogseqConfig(endpoint="http://x/api", token="t")
+        client = LogseqClient(cfg)
+        register_all_tools(mcp, client, cfg)
 
     def test_environment_variables_handling(self):
         """Test that environment variables are handled correctly."""

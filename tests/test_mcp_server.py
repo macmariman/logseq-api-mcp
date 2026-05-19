@@ -1,60 +1,28 @@
-"""Tests for MCP server functionality."""
+"""MCP server bootstrap and registry wiring (v1.0.1)."""
 
-import pytest
+from unittest.mock import MagicMock
 
-pytest.skip(
-    "rewritten in C1 — server.py still calls register_all_tools(mcp) "
-    "with one argument; suite re-enabled after C1 wires client/config",
-    allow_module_level=True,
-)
-
-from src.registry import register_all_tools  # noqa: E402
-from src.server import mcp  # noqa: E402
+from src.client.config import LogseqConfig
+from src.client.logseq_client import LogseqClient
+from src.registry import register_all_tools
 
 
-class TestMCPServer:
-    """Test cases for MCP server functionality."""
+def test_register_all_tools_accepts_mcp_client_and_config():
+    mcp = MagicMock()
+    cfg = LogseqConfig(endpoint="http://x/api", token="t")
+    client = LogseqClient(cfg)
+    register_all_tools(mcp, client, config=cfg)
+    # mcp.tool() called once per discovered tool
+    from src import tools
 
-    def test_server_initialization(self):
-        """Test that the MCP server can be initialized."""
-        assert mcp is not None
-        assert hasattr(mcp, "list_tools")
+    assert mcp.tool.call_count == len(tools.__all__)
 
-    @pytest.mark.asyncio
-    async def test_tool_registration(self):
-        """Test that all tools are properly registered."""
-        # Get the list of registered tools
-        tools = await mcp.list_tools()
 
-        # Check that we have the expected number of tools
-        assert len(tools) >= 9
+def test_server_module_imports_without_writing_stdout(capsys):
+    # Import the server module — must not emit anything to stdout.
+    import importlib
+    import src.server
 
-        # Check for specific tools
-        tool_names = [tool.name for tool in tools]
-        expected_tools = [
-            "append_block_in_page",
-            "create_page",
-            "edit_block",
-            "get_all_pages",
-            "get_page_blocks",
-            "get_block_content",
-            "get_all_page_content",
-            "get_page_links",
-            "get_linked_flashcards",
-        ]
-
-        for expected_tool in expected_tools:
-            assert expected_tool in tool_names, (
-                f"Tool {expected_tool} not found in registered tools"
-            )
-
-    @pytest.mark.skip(reason="rewritten in C1")
-    @pytest.mark.asyncio
-    async def test_register_all_tools_function(self):
-        """Test the register_all_tools function."""
-        # This should not raise any exceptions
-        register_all_tools(mcp)
-
-        # Verify tools are still registered
-        tools = await mcp.list_tools()
-        assert len(tools) >= 9
+    importlib.reload(src.server)
+    captured = capsys.readouterr()
+    assert captured.out == "", f"server import polluted stdout: {captured.out!r}"
