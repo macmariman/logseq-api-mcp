@@ -26,15 +26,6 @@ test = [
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=4.1.0",
 ]
-vector = [
-    "lancedb>=0.6",
-    "pyarrow>=14.0",
-    "watchdog>=4.0",
-    "portalocker>=2.0",
-]
-
-[project.scripts]
-logseq-sync = "src.vector.sync:cli_entry"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
