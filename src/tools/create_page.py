@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.parser.markdown import parse_content
 from src.logging_setup import get_logger
 
@@ -12,7 +12,7 @@ from src.logging_setup import get_logger
 _log = get_logger(__name__)
 
 
-async def _run(
+async def create_page(
     client: LogseqClient,
     config: LogseqConfig,
     page_name: str,
@@ -20,18 +20,18 @@ async def _run(
     fmt: Optional[str] = None,
     content: Optional[str] = None,
 ) -> List[TextContent]:
-    """Create a page using an injected client, optionally inserting parsed content.
+    """Create a new page in Logseq with optional markdown content.
 
     Args:
-        client: LogseqClient instance.
+        client: LogseqClient instance (injected by the registry).
         config: LogseqConfig (reserved for future use).
         page_name: The name of the page to create.
-        properties: Optional page-level properties dict.
-        fmt: Optional format string ('markdown' or 'org').
-        content: Optional markdown string; parsed and inserted as blocks.
+        properties: Optional dictionary of properties to set on the page.
+        fmt: Optional format for the page ('markdown' or 'org').
+        content: Optional markdown content; parsed into blocks and inserted.
 
     Returns:
-        List with one TextContent describing the result.
+        List with one TextContent describing success or failure.
 
     Complexity: O(B) where B is parsed block count.
     """
@@ -107,26 +107,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error creating page: {exc}")]
-
-
-async def create_page(
-    page_name: str,
-    properties: Optional[Dict[str, Any]] = None,
-    format: Optional[str] = None,
-    content: Optional[str] = None,
-) -> List[TextContent]:
-    """Create a new page in Logseq with optional markdown content.
-
-    Args:
-        page_name: The name of the page to create.
-        properties: Optional dictionary of properties to set on the page.
-        format: Optional format for the page ('markdown' or 'org').
-        content: Optional markdown content; parsed into blocks and inserted.
-
-    Returns:
-        List with one TextContent describing success or failure.
-
-    Complexity: O(B) where B is parsed block count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, page_name, properties, format, content)

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.parser.markdown import parse_content
 from src.logging_setup import get_logger
 
@@ -12,7 +12,7 @@ from src.logging_setup import get_logger
 _log = get_logger(__name__)
 
 
-async def _run(
+async def update_page(
     client: LogseqClient,
     config: LogseqConfig,
     page_name: str,
@@ -20,18 +20,18 @@ async def _run(
     mode: str = "append",
     properties: Optional[Dict[str, Any]] = None,
 ) -> List[TextContent]:
-    """Update a page's content and/or properties.
+    """Update an existing Logseq page by appending or replacing its content.
 
     Args:
-        client: LogseqClient instance.
+        client: LogseqClient instance (injected by the registry).
         config: LogseqConfig (reserved for future use).
         page_name: Name of the page to update.
-        content: Optional markdown content to append or replace.
-        mode: "append" (default) adds blocks; "replace" clears existing first.
+        content: Optional markdown content string; parsed into blocks.
+        mode: "append" (default) adds blocks after existing; "replace" clears first.
         properties: Optional properties dict to set on the page.
 
     Returns:
-        List with one TextContent describing the result.
+        List with one TextContent describing success or failure.
 
     Complexity: O(B) where B is parsed block count.
     """
@@ -99,26 +99,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error updating page: {exc}")]
-
-
-async def update_page(
-    page_name: str,
-    content: Optional[str] = None,
-    mode: str = "append",
-    properties: Optional[Dict[str, Any]] = None,
-) -> List[TextContent]:
-    """Update an existing Logseq page by appending or replacing its content.
-
-    Args:
-        page_name: Name of the page to update.
-        content: Optional markdown content string; parsed into blocks.
-        mode: "append" (default) adds blocks after existing; "replace" clears first.
-        properties: Optional properties dict to set on the page.
-
-    Returns:
-        List with one TextContent describing success or failure.
-
-    Complexity: O(B) where B is parsed block count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, page_name, content, mode, properties)

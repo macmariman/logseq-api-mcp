@@ -18,6 +18,11 @@ _WRAPPERS_TO_AUDIT = [
     "find_pages_by_property",
     "get_pages_from_namespace",
     "get_pages_tree_from_namespace",
+    "create_page",
+    "update_page",
+    "delete_page",
+    "rename_page",
+    "append_block_in_page",
 ]
 
 

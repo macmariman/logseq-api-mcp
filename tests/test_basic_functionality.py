@@ -80,7 +80,7 @@ class TestBasicFunctionality:
         sig = inspect.signature(create_page)
         assert "page_name" in sig.parameters
         assert "properties" in sig.parameters
-        assert "format" in sig.parameters
+        assert "fmt" in sig.parameters
 
         # append_block_in_page should accept page_identifier and content
         sig = inspect.signature(append_block_in_page)

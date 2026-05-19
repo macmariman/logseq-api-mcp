@@ -2,7 +2,7 @@
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
-from src.tools.update_page import _run
+from src.tools.update_page import update_page as _run
 
 _cfg = LogseqConfig("http://x", "t")
 _page_result = {"id": 1, "uuid": "page-uuid", "originalName": "My Page"}
