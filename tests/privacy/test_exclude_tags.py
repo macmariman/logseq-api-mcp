@@ -77,3 +77,20 @@ def test_filter_pages_all_excluded_returns_empty():
     ]
     result = filter_pages(pages, ("private", "secret"))
     assert result == []
+
+
+def test_extract_tags_lowercases_input():
+    assert extract_tags({"tags": ["Private", "SECRET"]}) == ["private", "secret"]
+
+
+def test_extract_tags_handles_db_mode_dict_shape():
+    assert extract_tags({"tags": [{"name": "private"}, {"name": "public"}]}) == [
+        "private",
+        "public",
+    ]
+
+
+def test_is_page_excluded_is_case_insensitive():
+    page = {"properties": {"tags": ["Private"]}}
+    assert is_page_excluded(page, ("private",)) is True
+    assert is_page_excluded(page, ("PRIVATE",)) is True
