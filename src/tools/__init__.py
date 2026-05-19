@@ -1,35 +1,44 @@
+"""Dynamic tool discovery for logseq-api-mcp.
+
+Iterates *.py files in this directory, imports each, and exposes any public
+function defined locally via __all__.
+
+@complexity O(T*F) where T is module count and F is function count per module.
+"""
+
 import importlib
 import inspect
+import logging
 from pathlib import Path
 from typing import List
 
-# Get the directory containing this __init__.py file
-_tools_dir = Path(__file__).parent
 
-# Dynamically discover and import all tool functions
-_discovered_tools = {}
+_log = logging.getLogger(__name__)
+_tools_dir = Path(__file__).parent
+_discovered_tools: dict = {}
 __all__: List[str] = []
 
+
+def _emit_import_warning(module_name: str, exc: Exception) -> None:
+    """Log a tool-discovery import failure without polluting stdout."""
+    _log.warning("Could not import tool module %s: %s", module_name, exc)
+
+
 for py_file in _tools_dir.glob("*.py"):
-    # Skip __init__.py and private files
     if py_file.name.startswith("_"):
         continue
-
-    # Import the module
     module_name = py_file.stem
     try:
         module = importlib.import_module(f".{module_name}", package=__package__)
-
-        # Find all callable functions in the module (exclude private functions)
         for name, obj in inspect.getmembers(module, inspect.isfunction):
-            if not name.startswith("_") and obj.__module__ == module.__name__:
-                _discovered_tools[name] = obj
-                __all__.append(name)
-                # Add to current namespace for imports
-                globals()[name] = obj
+            if name.startswith("_"):
+                continue
+            if obj.__module__ != module.__name__:
+                continue
+            _discovered_tools[name] = obj
+            __all__.append(name)
+            globals()[name] = obj
+    except ImportError as exc:
+        _emit_import_warning(module_name, exc)
 
-    except ImportError as e:
-        print(f"Warning: Could not import {module_name}: {e}")
-
-# Sort __all__ for consistent ordering
 __all__.sort()
