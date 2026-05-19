@@ -1,6 +1,7 @@
 """Async HTTP client for the Logseq local API."""
 
 import asyncio
+import time
 
 import aiohttp
 
@@ -52,6 +53,7 @@ class LogseqClient:
 
     def __init__(self, config: LogseqConfig) -> None:
         self._config = config
+        self._excluded_cache: tuple[float, frozenset[str]] | None = None
 
     # ── Internal ─────────────────────────────────────────────────────────────
 
@@ -170,6 +172,41 @@ class LogseqClient:
             "logseq.Editor.getPagesTreeFromNamespace", [namespace]
         )
         return result if result is not None else []
+
+    async def excluded_page_names(self, ttl_seconds: float = 60.0) -> frozenset[str]:
+        """Return the lower-cased set of page names hidden by exclude_tags, cached.
+
+        @param ttl_seconds Cache lifetime; reuse last result if younger than ttl.
+        @returns           frozenset of lower-cased originalName values.
+        @complexity        O(N) on cache miss for N pages; O(1) on hit.
+        """
+        if not self._config.exclude_tags:
+            return frozenset()
+        now = time.monotonic()
+        if self._excluded_cache is not None:
+            cached_at, cached = self._excluded_cache
+            if now - cached_at < ttl_seconds:
+                return cached
+        from src.privacy.exclude_tags import (
+            extract_tags,  # local import to avoid cycle
+            is_page_excluded,  # local import to avoid cycle
+        )
+
+        pages = await self.get_all_pages()
+        lowered_excludes = tuple(t.lower() for t in self._config.exclude_tags)
+
+        def _excluded(page: dict) -> bool:
+            # Normalize page tags to lower-case so comparison is case-insensitive
+            # even before E1 lands case-insensitive support in is_page_excluded.
+            props = page.get("properties") or {}
+            lowered = [str(t).lower() for t in extract_tags(props)]
+            return is_page_excluded({"properties": {"tags": lowered}}, lowered_excludes)
+
+        excluded = frozenset(
+            str(p.get("originalName", "")).lower() for p in pages if _excluded(p)
+        )
+        self._excluded_cache = (time.monotonic(), excluded)
+        return excluded
 
     # ── Page write operations ─────────────────────────────────────────────────
 

@@ -232,6 +232,10 @@ class FakeLogseqClient:
         self.calls.append(("resolve_property_ident", (property_name,), {}))
         return self.responses.get("resolve_property_ident")
 
+    async def excluded_page_names(self, ttl_seconds: float = 60.0) -> frozenset[str]:
+        self.calls.append(("excluded_page_names", (), {"ttl_seconds": ttl_seconds}))
+        return self.responses.get("excluded_page_names", frozenset())
+
 
 @pytest.fixture
 def fake_client():
