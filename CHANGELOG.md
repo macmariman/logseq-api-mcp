@@ -11,6 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-05-19
+
+### Removed
+- Vector subsystem (`src/vector/`, `vector_search`, `vector_db_status`, `logseq-sync` CLI, `[vector]` dep group) — retraction; the v1.0.0 implementation shipped without an embedder and was non-functional. See `MIGRATION.md`.
+- `get_page_links` tool alias — use `get_page_backlinks`.
+- `pathlib>=1.0.1` and `load-dotenv` runtime dependencies.
+
+### Added
+- `LogseqClient.excluded_page_names(ttl_seconds)` cached privacy helper.
+- `LogseqNotFoundError` raised on HTTP 404; `LogseqConnectionError` reserved for network failures only.
+- `pyyaml` runtime dependency for proper Markdown frontmatter parsing.
+
+### Changed
+- `register_all_tools(mcp, client, config)` — shared `LogseqClient` lifetime across the process.
+- `LogseqConfig.verify_ssl` default flipped to `True`.
+- `LogseqClient.create_page` now passes `properties` as the second positional arg per the official `IEditorProxy` signature.
+- `LogseqClient.append_block_in_page` forwards optional `options` arg.
+- `LogseqClient.resolve_property_ident` query now binds `?ident` (was incorrectly `?e`) and escapes input.
+- `LogseqClient.resolve_page_uuids` batches via a single datascript query.
+- `extract_tags` is case-insensitive and supports the DB-mode `[{name: "x"}]` shape.
+- `update_page` replace mode uses `insert_batch_block` to preserve block hierarchy.
+
+### Fixed
+- `src/tools/__init__.py` no longer writes to stdout (fixes MCP stdio JSON-RPC corruption on tool-import failure).
+- `find_pages_by_property` accepts namespaced property names; escapes `\` and `"`; caps values at 256 chars.
+- DB-mode tools resolve UUID → name before calling `getPageBlocksTree` (workaround for logseq/logseq#4920).
+
+---
+
 ## [1.0.0] - 2026-05-19
 
 ### New Features
