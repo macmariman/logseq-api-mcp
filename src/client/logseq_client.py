@@ -256,22 +256,19 @@ class LogseqClient:
         content: str,
         options: dict | None = None,
     ) -> dict:
-        """Append a new block at the end of a page.
+        """Append a block at the bottom of a Logseq page.
 
-        Args:
-            page_identifier: Page name or UUID.
-            content: Block text content.
-            options: Optional block options dict.
-
-        Returns:
-            Created block dict.
-
-        Complexity: O(1).
+        @param page_identifier PageIdentity (name).
+        @param content         Markdown block content.
+        @param options         Optional opts dict per IEditorProxy (properties=…).
+        @returns               BlockEntity dict.
+        @throws LogseqAPIError on backend failure.
+        @complexity O(1).
         """
-        result = await self._call(
-            "logseq.Editor.appendBlockInPage",
-            [page_identifier, content],
-        )
+        args: list = [page_identifier, content]
+        if options is not None:
+            args.append(options)
+        result = await self._call("logseq.Editor.appendBlockInPage", args)
         return result or {}
 
     async def insert_block(

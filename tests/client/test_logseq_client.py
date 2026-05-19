@@ -330,3 +330,27 @@ async def test_create_page_omits_properties_when_none():
             "logseq.Editor.createPage",
             ["MyPage", {}, {}],
         )
+
+
+async def test_append_block_in_page_forwards_options():
+    client = _client()
+    with patch.object(client, "_call", new_callable=AsyncMock) as mock_call:
+        mock_call.return_value = {"uuid": "u"}
+        await client.append_block_in_page(
+            "Page", "content", options={"properties": {"k": "v"}}
+        )
+        mock_call.assert_awaited_once_with(
+            "logseq.Editor.appendBlockInPage",
+            ["Page", "content", {"properties": {"k": "v"}}],
+        )
+
+
+async def test_append_block_in_page_omits_options_when_none():
+    client = _client()
+    with patch.object(client, "_call", new_callable=AsyncMock) as mock_call:
+        mock_call.return_value = {"uuid": "u"}
+        await client.append_block_in_page("Page", "content")
+        mock_call.assert_awaited_once_with(
+            "logseq.Editor.appendBlockInPage",
+            ["Page", "content"],
+        )
