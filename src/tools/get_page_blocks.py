@@ -6,7 +6,11 @@ from mcp.types import TextContent
 from src.client.logseq_client import LogseqClient
 from src.client.config import load_config
 from src.tools.formatters.blocks import format_block_tree
+from src.logging_setup import get_logger
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -24,6 +28,7 @@ async def _run(
     Complexity: O(N) where N is total block count.
     """
     try:
+        _log.debug("%s called", __name__)
         blocks = await client.get_page_blocks_tree(page_identifier)
         if not blocks:
             return [TextContent(type="text", text=f"✅ Page '{page_identifier}' has no blocks")]
@@ -47,6 +52,7 @@ async def _run(
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching page blocks: {exc}")]
 
 

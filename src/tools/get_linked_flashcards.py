@@ -5,6 +5,7 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import load_config
+from src.logging_setup import get_logger
 
 
 def _extract_flashcard_question(content: str) -> str:
@@ -64,6 +65,9 @@ def _find_flashcards_in_blocks(blocks: list[dict], page_info: dict) -> list[dict
     return flashcards
 
 
+
+_log = get_logger(__name__)
+
 async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
     """Find and format flashcards from a page and its links using an injected client.
 
@@ -77,6 +81,7 @@ async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
     Complexity: O(P * B) where P is page count, B is average block count.
     """
     try:
+        _log.debug("%s called", __name__)
         linked_refs = await client.get_page_linked_references(page_identifier)
         all_pages = await client.get_all_pages()
 
@@ -202,6 +207,7 @@ async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching linked flashcards: {exc}")]
 
 

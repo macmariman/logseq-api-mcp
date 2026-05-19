@@ -7,7 +7,11 @@ from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
 from src.privacy.exclude_tags import filter_pages
 from src.tools.formatters.pages import format_pages_listing
+from src.logging_setup import get_logger
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -31,6 +35,7 @@ async def _run(
     Complexity: O(N log N) where N is page count.
     """
     try:
+        _log.debug("%s called", __name__)
         pages = await client.get_all_pages()
 
         # Apply tag-based exclusion first
@@ -44,6 +49,7 @@ async def _run(
         text = format_pages_listing(pages, start, end)
         return [TextContent(type="text", text=text)]
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching pages: {exc}")]
 
 

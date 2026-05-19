@@ -7,7 +7,11 @@ from mcp.types import TextContent
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
 from src.tools.formatters.blocks import format_block_detail
+from src.logging_setup import get_logger
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -31,6 +35,7 @@ async def _run(
     Complexity: O(C) where C is child count.
     """
     try:
+        _log.debug("%s called", __name__)
         block = await client.get_block(block_uuid, include_children=include_children)
         if not block:
             return [TextContent(type="text", text=f"❌ Block with UUID '{block_uuid}' not found")]
@@ -65,6 +70,7 @@ async def _run(
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching block content: {exc}")]
 
 

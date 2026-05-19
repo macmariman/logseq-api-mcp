@@ -5,7 +5,11 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
+from src.logging_setup import get_logger
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -27,6 +31,7 @@ async def _run(
     Complexity: O(1).
     """
     try:
+        _log.debug("%s called", __name__)
         if not content or not content.strip():
             return [TextContent(type="text", text="❌ Content must not be empty")]
 
@@ -41,6 +46,7 @@ async def _run(
         )]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error updating block: {exc}")]
 
 

@@ -10,7 +10,11 @@ from src.tools.formatters.search import (
     format_search_results_markdown_mode,
     format_search_results_db_mode,
 )
+from src.logging_setup import get_logger
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -38,6 +42,7 @@ async def _run(
     Complexity: O(N) where N is total result count.
     """
     try:
+        _log.debug("%s called", __name__)
         result = await client.search(query)
 
         excluded_page_names: frozenset[str] = frozenset()
@@ -62,6 +67,7 @@ async def _run(
         return [TextContent(type="text", text=text)]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error searching Logseq: {exc}")]
 
 

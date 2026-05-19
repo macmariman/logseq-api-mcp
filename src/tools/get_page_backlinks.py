@@ -7,6 +7,7 @@ from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
 from src.privacy.exclude_tags import filter_pages
 from src.tools.formatters.pages import format_timestamp
+from src.logging_setup import get_logger
 
 
 def _format_linking_page(
@@ -60,6 +61,9 @@ def _format_linking_page(
     return lines
 
 
+
+_log = get_logger(__name__)
+
 async def _run(
     client: LogseqClient,
     config: LogseqConfig,
@@ -80,6 +84,7 @@ async def _run(
     Complexity: O(P + R) where P is page count, R is reference count.
     """
     try:
+        _log.debug("%s called", __name__)
         linked_refs = await client.get_page_linked_references(page_identifier)
         if not linked_refs:
             return [TextContent(type="text", text=f"✅ No pages link to '{page_identifier}'")]
@@ -137,6 +142,7 @@ async def _run(
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching page backlinks: {exc}")]
 
 

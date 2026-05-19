@@ -6,12 +6,16 @@ from mcp.types import TextContent
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
 from src.privacy.exclude_tags import filter_pages
+from src.logging_setup import get_logger
 
 
 def _is_page_item(item: dict) -> bool:
     """Return True if the query result item represents a page."""
     return "page" in item and "content" not in item or bool(item.get("page") and not item.get("uuid"))
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -35,6 +39,7 @@ async def _run(
     Complexity: O(N) where N is result count.
     """
     try:
+        _log.debug("%s called", __name__)
         items = await client.query_dsl(query)
 
         excluded_names: set[str] = set()
@@ -99,6 +104,7 @@ async def _run(
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error running query: {exc}")]
 
 

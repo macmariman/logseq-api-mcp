@@ -8,7 +8,11 @@ from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
 from src.privacy.exclude_tags import is_page_excluded
 from src.tools.formatters.blocks import collect_block_uuids, format_block_tree
+from src.logging_setup import get_logger
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -34,6 +38,7 @@ async def _run(
     Complexity: O(N) where N is total block count.
     """
     try:
+        _log.debug("%s called", __name__)
         page = await client.get_page(page_identifier)
         blocks = await client.get_page_blocks_tree(page_identifier)
 
@@ -99,6 +104,7 @@ async def _run(
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching page content: {exc}")]
 
 

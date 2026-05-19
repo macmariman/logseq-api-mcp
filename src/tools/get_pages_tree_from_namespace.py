@@ -6,7 +6,11 @@ from mcp.types import TextContent
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig, load_config
 from src.tools.formatters.pages import format_namespace_tree
+from src.logging_setup import get_logger
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -26,6 +30,7 @@ async def _run(
     Complexity: O(N) where N is total node count.
     """
     try:
+        _log.debug("%s called", __name__)
         pages = await client.get_pages_tree_from_namespace(namespace)
 
         lines = [
@@ -42,6 +47,7 @@ async def _run(
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching namespace tree: {exc}")]
 
 

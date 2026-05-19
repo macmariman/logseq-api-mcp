@@ -5,7 +5,11 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import load_config
+from src.logging_setup import get_logger
 
+
+
+_log = get_logger(__name__)
 
 async def _run(
     client: LogseqClient,
@@ -34,6 +38,7 @@ async def _run(
     Complexity: O(1).
     """
     try:
+        _log.debug("%s called", __name__)
         options: dict = {}
         if before is not None:
             options["before"] = before
@@ -65,6 +70,7 @@ async def _run(
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error appending block: {exc}")]
 
 
