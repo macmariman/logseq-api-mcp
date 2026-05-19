@@ -11,6 +11,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0] - 2026-05-19
+
+### New Features
+
+- **22 standard tools** — 13 new tools added on top of the original 9: `delete_block`, `delete_page`, `update_block`, `update_page`, `insert_nested_block`, `rename_page`, `set_block_properties` (DB-mode), `search`, `query`, `find_pages_by_property`, `get_pages_from_namespace`, `get_page_backlinks`, `get_pages_tree_from_namespace`
+- **Optional vector search** — `vector_search` and `vector_db_status` tools via LanceDB; `logseq-sync` CLI builds and watches the index; activated by `LOGSEQ_VECTOR_ENABLED=true` with the `[vector]` extra
+- **DB-mode support** — set `LOGSEQ_DB_MODE=true` to target Logseq's SQLite database format; unlocks `set_block_properties`, UUID-reference resolution in `get_all_page_content`, and Datalog-powered `find_pages_by_property`
+- **Privacy / exclude-tags** — `LOGSEQ_EXCLUDE_TAGS` hides tagged pages from all read operations: `get_all_pages`, `search`, `query`, `find_pages_by_property`, `get_page_backlinks`, and `get_all_page_content` (access-denied guard)
+- **Structured logging** — rotating file handler (`~/.cache/logseq-api-mcp/server.log`), stderr fallback, configurable via `LOGSEQ_LOG_LEVEL`
+- **Markdown parser** — `parse_content()` converts markdown strings into `ParsedContent(blocks, properties)` used by `create_page` and `update_page`
+- **`get_all_pages`** — new `include_journals` filter parameter
+- **`get_all_page_content`** — new `format`, `max_depth`, and `resolve_refs` parameters; DB-mode UUID-reference expansion
+- **`get_block_content`** — new `format`, `include_children`, and DB-mode property resolution parameters
+- **`get_page_backlinks`** — renamed from `get_page_links` alias; new `include_content` parameter
+- **`create_page`** — content parameter uses markdown parser for block ingestion with frontmatter support
+- **`.claude-plugin/`** — `plugin.json` (MCP server manifest) and `marketplace.json` (Claude marketplace metadata)
+
+### Architecture
+
+- **Injected-client pattern** — all 22 tools split into `_run(client, config, ...)` (testable) and a public MCP-facing wrapper; zero `aiohttp` patching in tool tests
+- **`LogseqClient`** — async aiohttp wrapper for every Logseq API call with SSL control and DB-mode methods (`datascript_query`, `resolve_page_uuids`, `get_blocks_db_properties`, `resolve_property_ident`, `upsert_block_property`)
+- **`LogseqConfig`** — frozen dataclass replacing raw env-var reads in every tool
+- **Pure formatter modules** — `src/tools/formatters/pages.py`, `blocks.py`, `search.py` extracted as zero-mock-testable pure functions
+- **`src/privacy/exclude_tags.py`** — `extract_tags`, `is_page_excluded`, `filter_pages` pure functions
+- **`src/vector/`** — `VectorConfig`, `sync_graph`, `watch_graph`, `vector_search`, `vector_db_status`, `cli_entry`
+
+### Testing
+
+- Test suite expanded from ~68 to **345 tests** with **87% coverage**
+- Coverage gate raised from 80% to **85%** (≥85% required for CI to pass)
+- New test directories: `tests/client/`, `tests/parser/`, `tests/privacy/`, `tests/tools/formatters/`, `tests/vector/`
+
+### CI/CD
+
+- `ci.yml` — matrix now includes Python 3.12 + `[vector]` group; coverage gate raised to 85%; tool-count step verifies all 22 standard tools are present
+- `quality.yml` — mypy now targets all new source modules (`src/client/`, `src/privacy/`, `src/parser/`, `src/tools/`, `src/vector/`)
+- `pr-validation.yml` (new) — three-job PR gate: tool count ≥21, coverage ≥85%, ruff lint + format
+
+### Documentation
+
+- `README.md` — complete rewrite: pain-point hook in first 43 words, dark/light SVG architecture diagram via `<picture>`, 22-tool tables, environment variables table, DB-mode/privacy/vector sections
+- `CLAUDE.md` — updated with full module map, `FakeLogseqClient` test pattern, all env vars, and TDD invariants
+- `assets/architecture-dark.svg` + `assets/architecture-light.svg` — hand-crafted SVGs with automatic GitHub dark/light mode switching
+
+### Upgrade Notes
+
+> No breaking changes to existing tools (`get_all_pages`, `get_page_blocks`, `get_page_links`, `get_block_content`, `get_all_page_content`, `get_linked_flashcards`, `append_block_in_page`, `create_page`, `edit_block`).
+>
+> New environment variables (`LOGSEQ_DB_MODE`, `LOGSEQ_EXCLUDE_TAGS`, `LOGSEQ_LOG_LEVEL`, `LOGSEQ_VECTOR_*`) are optional with safe defaults — existing `.env` files continue to work without changes.
+>
+> The `[vector]` dependency group is opt-in: `uv sync --group vector`. Vector tools only register when `LOGSEQ_VECTOR_ENABLED=true`.
+
+[1.0.0]: https://github.com/gustavo-meilus/logseq-api-mcp/compare/v0.1.0...v1.0.0
+
+---
+
 ## [0.1.0] - 2026-05-18
 
 ### New Features
