@@ -11,11 +11,15 @@ from src.logging_setup import get_logger
 
 def _is_page_item(item: dict) -> bool:
     """Return True if the query result item represents a page."""
-    return "page" in item and "content" not in item or bool(item.get("page") and not item.get("uuid"))
-
+    return (
+        "page" in item
+        and "content" not in item
+        or bool(item.get("page") and not item.get("uuid"))
+    )
 
 
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -47,7 +51,9 @@ async def _run(
             all_pages = await client.get_all_pages()
             visible = filter_pages(all_pages, config.exclude_tags)
             visible_names = {(p.get("name") or "").lower() for p in visible}
-            excluded_names = {(p.get("name") or "").lower() for p in all_pages} - visible_names
+            excluded_names = {
+                (p.get("name") or "").lower() for p in all_pages
+            } - visible_names
 
         def _page_name(item: dict) -> str:
             top = item.get("originalName") or item.get("name") or ""
@@ -61,8 +67,12 @@ async def _run(
 
         items = [it for it in items if not _is_excluded(it)]
 
-        page_items = [it for it in items if it.get("originalName") or it.get("page?") is not None]
-        block_items = [it for it in items if it.get("content") and not it.get("originalName")]
+        page_items = [
+            it for it in items if it.get("originalName") or it.get("page?") is not None
+        ]
+        block_items = [
+            it for it in items if it.get("content") and not it.get("originalName")
+        ]
 
         if result_type == "pages_only":
             display_items = page_items

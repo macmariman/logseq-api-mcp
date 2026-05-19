@@ -1,11 +1,9 @@
 """Tests for logging setup and fallback behaviour."""
 
 import logging
-import os
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
 from src.logging_setup import setup_logging, get_logger
 
@@ -52,6 +50,7 @@ class TestToolLogging:
     async def test_tool_logs_on_entry(self, tmp_path):
         """Tools emit a DEBUG log on entry without raising."""
         from src.logging_setup import setup_logging
+
         logger = setup_logging(log_dir=tmp_path)
         logger.setLevel(logging.DEBUG)
 
@@ -67,6 +66,7 @@ class TestToolLogging:
     async def test_tool_logs_error_on_exception(self, tmp_path, caplog):
         """Tools log ERROR when an exception is raised."""
         from src.logging_setup import setup_logging
+
         setup_logging(log_dir=tmp_path)
 
         from src.client.config import LogseqConfig

@@ -5,8 +5,14 @@ from tests.conftest import FakeLogseqClient
 from src.tools.delete_block import _run
 
 _cfg = LogseqConfig("http://x", "t")
-_block = {"id": 1, "uuid": "block-abc", "content": "some content", "level": 1,
-           "properties": {}, "children": []}
+_block = {
+    "id": 1,
+    "uuid": "block-abc",
+    "content": "some content",
+    "level": 1,
+    "properties": {},
+    "children": [],
+}
 
 
 class TestDeleteBlock:

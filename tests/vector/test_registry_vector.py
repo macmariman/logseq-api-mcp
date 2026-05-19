@@ -21,6 +21,7 @@ def test_vector_tools_not_registered_when_deps_missing():
         def decorator(fn):
             registered_names.append(fn.__name__)
             return fn
+
         return decorator
 
     mcp.tool = capture_tool
@@ -40,12 +41,15 @@ def test_vector_tools_not_registered_when_config_is_none():
         def decorator(fn):
             registered_names.append(fn.__name__)
             return fn
+
         return decorator
 
     mcp.tool = capture_tool
 
-    with patch("src.registry.VECTOR_AVAILABLE", True), \
-         patch("src.registry.load_vector_config", return_value=None):
+    with (
+        patch("src.registry.VECTOR_AVAILABLE", True),
+        patch("src.registry.load_vector_config", return_value=None),
+    ):
         register_all_tools(mcp)
 
     assert "vector_search" not in registered_names
@@ -60,13 +64,16 @@ def test_vector_tools_registered_when_available_and_configured():
         def decorator(fn):
             registered_names.append(fn.__name__)
             return fn
+
         return decorator
 
     mcp.tool = capture_tool
 
     cfg = VectorConfig(db_path=Path("/tmp/db"), graph_path=Path("/tmp/graph"))
-    with patch("src.registry.VECTOR_AVAILABLE", True), \
-         patch("src.registry.load_vector_config", return_value=cfg):
+    with (
+        patch("src.registry.VECTOR_AVAILABLE", True),
+        patch("src.registry.load_vector_config", return_value=cfg),
+    ):
         register_all_tools(mcp)
 
     assert "vector_search" in registered_names

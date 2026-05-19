@@ -1,7 +1,5 @@
 """Tests for VectorConfig and load_vector_config."""
 
-import os
-import pytest
 from pathlib import Path
 
 from src.vector.config import VectorConfig, load_vector_config

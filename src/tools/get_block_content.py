@@ -10,8 +10,8 @@ from src.tools.formatters.blocks import format_block_detail
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -38,7 +38,11 @@ async def _run(
         _log.debug("%s called", __name__)
         block = await client.get_block(block_uuid, include_children=include_children)
         if not block:
-            return [TextContent(type="text", text=f"❌ Block with UUID '{block_uuid}' not found")]
+            return [
+                TextContent(
+                    type="text", text=f"❌ Block with UUID '{block_uuid}' not found"
+                )
+            ]
 
         db_props: dict[str, dict] = {}
         if config.db_mode:
@@ -56,7 +60,9 @@ async def _run(
                 payload["db_properties"] = db_props.get(block_uuid, {})
             if include_children:
                 payload["children"] = block.get("children", [])
-            return [TextContent(type="text", text=json.dumps(payload, ensure_ascii=False))]
+            return [
+                TextContent(type="text", text=json.dumps(payload, ensure_ascii=False))
+            ]
 
         lines = format_block_detail(block, is_child=False)
 
@@ -71,7 +77,9 @@ async def _run(
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
-        return [TextContent(type="text", text=f"❌ Error fetching block content: {exc}")]
+        return [
+            TextContent(type="text", text=f"❌ Error fetching block content: {exc}")
+        ]
 
 
 async def get_block_content(

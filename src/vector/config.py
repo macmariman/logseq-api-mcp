@@ -24,11 +24,12 @@ def load_vector_config() -> Optional[VectorConfig]:
         return None
 
     db_path = Path(
-        os.getenv("LOGSEQ_VECTOR_PATH", str(Path.home() / ".cache" / "logseq-api-mcp" / "vector_db"))
+        os.getenv(
+            "LOGSEQ_VECTOR_PATH",
+            str(Path.home() / ".cache" / "logseq-api-mcp" / "vector_db"),
+        )
     )
-    graph_path = Path(
-        os.getenv("LOGSEQ_GRAPH_PATH", str(Path.home() / "logseq"))
-    )
+    graph_path = Path(os.getenv("LOGSEQ_GRAPH_PATH", str(Path.home() / "logseq")))
 
     exclude_raw = os.getenv("LOGSEQ_EXCLUDE_TAGS", "")
     exclude_tags = [t.strip() for t in exclude_raw.split(",") if t.strip()]

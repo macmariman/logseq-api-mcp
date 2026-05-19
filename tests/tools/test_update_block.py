@@ -5,8 +5,14 @@ from tests.conftest import FakeLogseqClient
 from src.tools.update_block import _run
 
 _cfg = LogseqConfig("http://x", "t")
-_block = {"id": 1, "uuid": "block-xyz", "content": "old text", "level": 1,
-           "properties": {}, "children": []}
+_block = {
+    "id": 1,
+    "uuid": "block-xyz",
+    "content": "old text",
+    "level": 1,
+    "properties": {},
+    "children": [],
+}
 
 
 class TestUpdateBlock:

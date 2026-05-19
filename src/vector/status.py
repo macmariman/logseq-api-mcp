@@ -27,23 +27,27 @@ async def vector_db_status() -> List[TextContent]:
     """
     cfg = load_vector_config()
     if cfg is None:
-        return [TextContent(
-            type="text",
-            text="ℹ️ **Vector Search Status**: disabled\nSet LOGSEQ_VECTOR_ENABLED=true to enable.",
-        )]
+        return [
+            TextContent(
+                type="text",
+                text="ℹ️ **Vector Search Status**: disabled\nSet LOGSEQ_VECTOR_ENABLED=true to enable.",
+            )
+        ]
 
     if lancedb is None:
-        return [TextContent(
-            type="text",
-            text=(
-                "⚠️ **Vector Search Status**: enabled (config found) but lancedb not installed\n"
-                "Install with: uv sync --group vector"
-            ),
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=(
+                    "⚠️ **Vector Search Status**: enabled (config found) but lancedb not installed\n"
+                    "Install with: uv sync --group vector"
+                ),
+            )
+        ]
 
     lines = [
         "📊 **Vector DB Status**",
-        f"✅ Enabled: yes",
+        "✅ Enabled: yes",
         f"📁 DB path: {cfg.db_path}",
         f"📂 Graph path: {cfg.graph_path}",
     ]

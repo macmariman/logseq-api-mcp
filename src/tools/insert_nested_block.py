@@ -8,8 +8,8 @@ from src.client.config import LogseqConfig, load_config
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -41,7 +41,11 @@ async def _run(
 
         parent = await client.get_block(parent_block_uuid, include_children=False)
         if not parent:
-            return [TextContent(type="text", text=f"❌ Parent block '{parent_block_uuid}' not found")]
+            return [
+                TextContent(
+                    type="text", text=f"❌ Parent block '{parent_block_uuid}' not found"
+                )
+            ]
 
         new_block = await client.insert_block(
             parent_block_uuid,
@@ -86,4 +90,6 @@ async def insert_nested_block(
     Complexity: O(1).
     """
     cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, parent_block_uuid, content, properties, sibling)
+    return await _run(
+        LogseqClient(cfg), cfg, parent_block_uuid, content, properties, sibling
+    )

@@ -66,7 +66,9 @@ class TestGetBlockContent:
         call = next(c for c in client.calls if c[0] == "get_block")
         assert call[2]["include_children"] is True
 
-    async def test_include_children_false_fetches_without_children(self, sample_block_data):
+    async def test_include_children_false_fetches_without_children(
+        self, sample_block_data
+    ):
         client = FakeLogseqClient({"get_block": sample_block_data})
         await _run(client, _cfg, "block-uuid-456", include_children=False)
         call = next(c for c in client.calls if c[0] == "get_block")
@@ -75,18 +77,22 @@ class TestGetBlockContent:
     # ── db_mode property injection ────────────────────────────────────────────
 
     async def test_db_mode_calls_get_blocks_db_properties(self, sample_block_data):
-        client = FakeLogseqClient({
-            "get_block": sample_block_data,
-            "get_blocks_db_properties": {"block-uuid-456": {"priority": "A"}},
-        })
+        client = FakeLogseqClient(
+            {
+                "get_block": sample_block_data,
+                "get_blocks_db_properties": {"block-uuid-456": {"priority": "A"}},
+            }
+        )
         await _run(client, _cfg_db, "block-uuid-456")
         assert any(c[0] == "get_blocks_db_properties" for c in client.calls)
 
     async def test_db_mode_properties_shown_in_output(self, sample_block_data):
-        client = FakeLogseqClient({
-            "get_block": sample_block_data,
-            "get_blocks_db_properties": {"block-uuid-456": {"priority": "A"}},
-        })
+        client = FakeLogseqClient(
+            {
+                "get_block": sample_block_data,
+                "get_blocks_db_properties": {"block-uuid-456": {"priority": "A"}},
+            }
+        )
         result = await _run(client, _cfg_db, "block-uuid-456")
         assert "priority" in result[0].text
 

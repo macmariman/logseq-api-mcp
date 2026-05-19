@@ -21,7 +21,9 @@ async def test_vector_db_status_disabled_when_not_configured():
         result = await vector_db_status()
 
     assert len(result) == 1
-    assert "disabled" in result[0].text.lower() or "not enabled" in result[0].text.lower()
+    assert (
+        "disabled" in result[0].text.lower() or "not enabled" in result[0].text.lower()
+    )
 
 
 async def test_vector_db_status_reports_doc_count(vector_config):
@@ -30,8 +32,10 @@ async def test_vector_db_status_reports_doc_count(vector_config):
     mock_db = MagicMock()
     mock_db.open_table.return_value = mock_table
 
-    with patch("src.vector.status.lancedb") as mock_lancedb, \
-         patch("src.vector.status.load_vector_config", return_value=vector_config):
+    with (
+        patch("src.vector.status.lancedb") as mock_lancedb,
+        patch("src.vector.status.load_vector_config", return_value=vector_config),
+    ):
         mock_lancedb.connect.return_value = mock_db
         result = await vector_db_status()
 
@@ -43,8 +47,10 @@ async def test_vector_db_status_reports_not_synced_when_no_table(vector_config):
     mock_db = MagicMock()
     mock_db.open_table.side_effect = Exception("table not found")
 
-    with patch("src.vector.status.lancedb") as mock_lancedb, \
-         patch("src.vector.status.load_vector_config", return_value=vector_config):
+    with (
+        patch("src.vector.status.lancedb") as mock_lancedb,
+        patch("src.vector.status.load_vector_config", return_value=vector_config),
+    ):
         mock_lancedb.connect.return_value = mock_db
         result = await vector_db_status()
 
@@ -53,8 +59,10 @@ async def test_vector_db_status_reports_not_synced_when_no_table(vector_config):
 
 
 async def test_vector_db_status_reports_lancedb_missing(vector_config):
-    with patch("src.vector.status.lancedb", None), \
-         patch("src.vector.status.load_vector_config", return_value=vector_config):
+    with (
+        patch("src.vector.status.lancedb", None),
+        patch("src.vector.status.load_vector_config", return_value=vector_config),
+    ):
         result = await vector_db_status()
 
     assert len(result) == 1

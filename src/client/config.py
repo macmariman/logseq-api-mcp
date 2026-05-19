@@ -41,7 +41,9 @@ def load_config() -> LogseqConfig:
     """
     token = os.getenv("LOGSEQ_API_TOKEN", "")
     if not token:
-        raise ValueError("LOGSEQ_API_TOKEN environment variable is required but not set.")
+        raise ValueError(
+            "LOGSEQ_API_TOKEN environment variable is required but not set."
+        )
 
     # Resolve endpoint: explicit full URL takes priority, then base URL, then default
     endpoint = os.getenv("LOGSEQ_API_ENDPOINT", "")
@@ -62,9 +64,9 @@ def load_config() -> LogseqConfig:
     db_mode = os.getenv("LOGSEQ_DB_MODE", "").lower() in ("1", "true", "yes")
 
     raw_tags = os.getenv("LOGSEQ_EXCLUDE_TAGS", "")
-    exclude_tags: tuple[str, ...] = tuple(
-        t.strip() for t in raw_tags.split(",") if t.strip()
-    ) if raw_tags else ()
+    exclude_tags: tuple[str, ...] = (
+        tuple(t.strip() for t in raw_tags.split(",") if t.strip()) if raw_tags else ()
+    )
 
     return LogseqConfig(
         endpoint=endpoint,

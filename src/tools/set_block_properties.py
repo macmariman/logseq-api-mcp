@@ -8,8 +8,8 @@ from src.client.config import LogseqConfig, load_config
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -33,13 +33,17 @@ async def _run(
     try:
         _log.debug("%s called", __name__)
         if not config.db_mode:
-            return [TextContent(
-                type="text",
-                text="❌ set_block_properties requires DB mode (LOGSEQ_DB_MODE=true)"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text="❌ set_block_properties requires DB mode (LOGSEQ_DB_MODE=true)",
+                )
+            ]
 
         if not properties:
-            return [TextContent(type="text", text="❌ Properties dict must not be empty")]
+            return [
+                TextContent(type="text", text="❌ Properties dict must not be empty")
+            ]
 
         block = await client.get_block(block_uuid, include_children=False)
         if not block:
@@ -59,7 +63,9 @@ async def _run(
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
-        return [TextContent(type="text", text=f"❌ Error setting block properties: {exc}")]
+        return [
+            TextContent(type="text", text=f"❌ Error setting block properties: {exc}")
+        ]
 
 
 async def set_block_properties(

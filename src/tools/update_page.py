@@ -9,8 +9,8 @@ from src.parser.markdown import parse_content
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -38,7 +38,12 @@ async def _run(
     try:
         _log.debug("%s called", __name__)
         if not content and not properties:
-            return [TextContent(type="text", text="❌ Nothing to update: provide content or properties")]
+            return [
+                TextContent(
+                    type="text",
+                    text="❌ Nothing to update: provide content or properties",
+                )
+            ]
 
         page = await client.get_page(page_name)
         if not page:
@@ -69,13 +74,19 @@ async def _run(
         actions: list[str] = []
 
         if batch_blocks:
-            await client.append_block_in_page(page_name, batch_blocks[0].get("content", ""))
+            await client.append_block_in_page(
+                page_name, batch_blocks[0].get("content", "")
+            )
             for block in batch_blocks[1:]:
                 await client.append_block_in_page(page_name, block.get("content", ""))
-            actions.append(f"{len(batch_blocks)} block(s) {'replaced' if mode == 'replace' else 'appended'}")
+            actions.append(
+                f"{len(batch_blocks)} block(s) {'replaced' if mode == 'replace' else 'appended'}"
+            )
 
         if merged_props:
-            actions.append(f"{len(merged_props)} propert{'ies' if len(merged_props) != 1 else 'y'} set")
+            actions.append(
+                f"{len(merged_props)} propert{'ies' if len(merged_props) != 1 else 'y'} set"
+            )
 
         summary = "; ".join(actions) if actions else "no changes"
         lines = [

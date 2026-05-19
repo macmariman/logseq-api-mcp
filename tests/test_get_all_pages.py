@@ -51,14 +51,18 @@ class TestGetAllPages:
     async def test_include_journals_false_hides_journals(self):
         pages = [_page("Regular"), _page("2024-01-01", journal=True)]
         client = FakeLogseqClient({"get_all_pages": pages})
-        result = await _run(client, LogseqConfig("http://x", "t"), include_journals=False)
+        result = await _run(
+            client, LogseqConfig("http://x", "t"), include_journals=False
+        )
         assert "JOURNAL PAGES" not in result[0].text
         assert "2024-01-01" not in result[0].text
 
     async def test_include_journals_true_shows_journals(self):
         pages = [_page("Regular"), _page("2024-01-01", journal=True)]
         client = FakeLogseqClient({"get_all_pages": pages})
-        result = await _run(client, LogseqConfig("http://x", "t"), include_journals=True)
+        result = await _run(
+            client, LogseqConfig("http://x", "t"), include_journals=True
+        )
         assert "2024-01-01" in result[0].text
 
     async def test_include_journals_default_shows_journals(self):

@@ -20,9 +20,7 @@ def test_format_block_tree_indents_children():
     block = {
         "content": "Parent",
         "uuid": "u1",
-        "children": [
-            {"content": "Child", "uuid": "u2", "children": []}
-        ],
+        "children": [{"content": "Child", "uuid": "u2", "children": []}],
     }
     lines = format_block_tree(block)
     assert len(lines) == 2
@@ -44,9 +42,7 @@ def test_format_block_tree_respects_max_level():
             {
                 "content": "Level 1",
                 "uuid": "u2",
-                "children": [
-                    {"content": "Level 2", "uuid": "u3", "children": []}
-                ],
+                "children": [{"content": "Level 2", "uuid": "u3", "children": []}],
             }
         ],
     }

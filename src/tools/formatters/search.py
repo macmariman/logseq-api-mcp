@@ -41,7 +41,8 @@ def format_search_results_markdown_mode(
 
     if include_pages and result.get("pages-content"):
         snippets = [
-            s for s in result["pages-content"]
+            s
+            for s in result["pages-content"]
             if (s.get("block/snippet", "") or "").lower() not in excluded_page_names
         ]
         if snippets:
@@ -114,14 +115,19 @@ def format_search_results_db_mode(
 
     if include_pages and page_results:
         visible = [
-            p for p in page_results
+            p
+            for p in page_results
             if (p.get("fullTitle") or p.get("title") or p.get("content", "")).lower()
             not in excluded_page_names
         ]
         if visible:
             parts.append(f"## Matching Pages ({len(visible)} found)")
             for page in visible:
-                name = page.get("fullTitle") or page.get("title") or page.get("content", "")
+                name = (
+                    page.get("fullTitle")
+                    or page.get("title")
+                    or page.get("content", "")
+                )
                 parts.append(f"- {name}")
             parts.append("")
 

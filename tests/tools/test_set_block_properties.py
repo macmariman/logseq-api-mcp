@@ -6,8 +6,14 @@ from src.tools.set_block_properties import _run
 
 _cfg = LogseqConfig("http://x", "t")
 _cfg_db = LogseqConfig("http://x", "t", db_mode=True)
-_block = {"id": 1, "uuid": "block-prop", "content": "text",
-           "level": 1, "properties": {}, "children": []}
+_block = {
+    "id": 1,
+    "uuid": "block-prop",
+    "content": "text",
+    "level": 1,
+    "properties": {},
+    "children": [],
+}
 
 
 class TestSetBlockProperties:

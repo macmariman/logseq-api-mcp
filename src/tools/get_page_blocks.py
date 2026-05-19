@@ -9,8 +9,8 @@ from src.tools.formatters.blocks import format_block_tree
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -31,7 +31,11 @@ async def _run(
         _log.debug("%s called", __name__)
         blocks = await client.get_page_blocks_tree(page_identifier)
         if not blocks:
-            return [TextContent(type="text", text=f"✅ Page '{page_identifier}' has no blocks")]
+            return [
+                TextContent(
+                    type="text", text=f"✅ Page '{page_identifier}' has no blocks"
+                )
+            ]
 
         page_info = blocks[0].get("page", {}) if blocks else {}
         page_name = page_info.get("name", page_identifier)

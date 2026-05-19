@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from mcp.types import TextContent
 
-from src.vector.config import VectorConfig, load_vector_config
+from src.vector.config import load_vector_config
 from src.logging_setup import get_logger
 
 try:
@@ -34,26 +34,32 @@ async def vector_search(
     """
     cfg = load_vector_config()
     if cfg is None:
-        return [TextContent(
-            type="text",
-            text="ℹ️ Vector search not enabled. Set LOGSEQ_VECTOR_ENABLED=true and run logseq-sync.",
-        )]
+        return [
+            TextContent(
+                type="text",
+                text="ℹ️ Vector search not enabled. Set LOGSEQ_VECTOR_ENABLED=true and run logseq-sync.",
+            )
+        ]
 
     if lancedb is None:
-        return [TextContent(
-            type="text",
-            text="❌ lancedb not installed. Install with: uv sync --group vector",
-        )]
+        return [
+            TextContent(
+                type="text",
+                text="❌ lancedb not installed. Install with: uv sync --group vector",
+            )
+        ]
 
     try:
         db = lancedb.connect(str(cfg.db_path))
         table = db.open_table(_TABLE_NAME)
     except Exception as exc:
         _log.error("vector_search: cannot open table: %s", exc)
-        return [TextContent(
-            type="text",
-            text=f"❌ Vector DB not found or not synced: {exc}\nRun: logseq-sync --once",
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=f"❌ Vector DB not found or not synced: {exc}\nRun: logseq-sync --once",
+            )
+        ]
 
     try:
         rows = table.search(query).limit(limit).to_list()

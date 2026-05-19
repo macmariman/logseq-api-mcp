@@ -8,8 +8,8 @@ from src.client.config import LogseqConfig, load_config
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -36,17 +36,23 @@ async def _run(
             return [TextContent(type="text", text="❌ New name must not be empty")]
 
         if old_name == new_name:
-            return [TextContent(type="text", text=f"❌ New name is identical to current name '{old_name}'")]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ New name is identical to current name '{old_name}'",
+                )
+            ]
 
         page = await client.get_page(old_name)
         if not page:
             return [TextContent(type="text", text=f"❌ Page '{old_name}' not found")]
 
         await client.rename_page(old_name, new_name)
-        return [TextContent(
-            type="text",
-            text=f"✅ Page renamed: '{old_name}' → '{new_name}'"
-        )]
+        return [
+            TextContent(
+                type="text", text=f"✅ Page renamed: '{old_name}' → '{new_name}'"
+            )
+        ]
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)

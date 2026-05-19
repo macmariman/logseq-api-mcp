@@ -9,8 +9,8 @@ from src.parser.markdown import parse_content
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -53,7 +53,12 @@ async def _run(
         )
 
         if not result:
-            return [TextContent(type="text", text="❌ Failed to create page: No response from Logseq API")]
+            return [
+                TextContent(
+                    type="text",
+                    text="❌ Failed to create page: No response from Logseq API",
+                )
+            ]
 
         lines = ["✅ **PAGE CREATED SUCCESSFULLY**", f"📄 Page Name: {page_name}", ""]
 
@@ -64,23 +69,27 @@ async def _run(
             is_journal = result.get("journal?", False)
             page_format = result.get("format", "markdown")
 
-            lines.extend([
-                "📊 **PAGE DETAILS:**",
-                f"• ID: {page_id}",
-                f"• UUID: {page_uuid}",
-                f"• Original Name: {original_name}",
-                f"• Format: {page_format}",
-                f"• Journal Page: {'Yes' if is_journal else 'No'}",
-                "",
-            ])
+            lines.extend(
+                [
+                    "📊 **PAGE DETAILS:**",
+                    f"• ID: {page_id}",
+                    f"• UUID: {page_uuid}",
+                    f"• Original Name: {original_name}",
+                    f"• Format: {page_format}",
+                    f"• Journal Page: {'Yes' if is_journal else 'No'}",
+                    "",
+                ]
+            )
 
             page_properties = result.get("properties", {})
             if page_properties:
-                lines.extend([
-                    "⚙️ **PAGE PROPERTIES:**",
-                    *[f"• {k}: {v}" for k, v in page_properties.items()],
-                    "",
-                ])
+                lines.extend(
+                    [
+                        "⚙️ **PAGE PROPERTIES:**",
+                        *[f"• {k}: {v}" for k, v in page_properties.items()],
+                        "",
+                    ]
+                )
 
         if merged_props:
             lines.append(f"⚙️ Properties set: {len(merged_props)} items")

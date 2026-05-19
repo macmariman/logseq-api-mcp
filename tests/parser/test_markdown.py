@@ -1,10 +1,10 @@
 """Tests for the Markdown → Logseq block tree parser."""
 
-import pytest
 from src.parser.markdown import BlockNode, ParsedContent, parse_content
 
 
 # ── BlockNode ────────────────────────────────────────────────────────────────
+
 
 class TestBlockNode:
     def test_to_batch_format_simple(self):
@@ -13,7 +13,9 @@ class TestBlockNode:
         assert fmt["content"] == "Hello"
 
     def test_to_batch_format_with_properties(self):
-        node = BlockNode(content="Task", properties={"logseq.order-list-type": "number"})
+        node = BlockNode(
+            content="Task", properties={"logseq.order-list-type": "number"}
+        )
         fmt = node.to_batch_format()
         assert "logseq.order-list-type:: number" in fmt["content"]
 
@@ -41,6 +43,7 @@ class TestBlockNode:
 
 # ── ParsedContent ─────────────────────────────────────────────────────────────
 
+
 class TestParsedContent:
     def test_to_batch_format_returns_list(self):
         pc = ParsedContent(blocks=[BlockNode(content="A"), BlockNode(content="B")])
@@ -56,6 +59,7 @@ class TestParsedContent:
 
 
 # ── parse_content ─────────────────────────────────────────────────────────────
+
 
 class TestParseContent:
     def test_empty_string(self):

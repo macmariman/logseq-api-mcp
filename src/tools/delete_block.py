@@ -8,8 +8,8 @@ from src.client.config import LogseqConfig, load_config
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -35,7 +35,11 @@ async def _run(
             return [TextContent(type="text", text=f"❌ Block '{block_uuid}' not found")]
 
         await client.delete_block(block_uuid)
-        return [TextContent(type="text", text=f"✅ Block '{block_uuid}' deleted successfully")]
+        return [
+            TextContent(
+                type="text", text=f"✅ Block '{block_uuid}' deleted successfully"
+            )
+        ]
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)

@@ -9,8 +9,8 @@ from src.tools.formatters.pages import format_timestamp
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -54,7 +54,9 @@ async def _run(
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
-        return [TextContent(type="text", text=f"❌ Error fetching namespace pages: {exc}")]
+        return [
+            TextContent(type="text", text=f"❌ Error fetching namespace pages: {exc}")
+        ]
 
 
 async def get_pages_from_namespace(namespace: str) -> List[TextContent]:

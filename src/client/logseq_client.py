@@ -1,6 +1,5 @@
 """Async HTTP client for the Logseq local API."""
 
-import json
 import aiohttp
 
 from .config import LogseqConfig
@@ -56,7 +55,8 @@ class LogseqClient:
                 ) as resp:
                     if resp.status in (401, 403):
                         raise LogseqAuthError(
-                            f"Authentication failed for {method}", status_code=resp.status
+                            f"Authentication failed for {method}",
+                            status_code=resp.status,
                         )
                     if resp.status != 200:
                         raise LogseqAPIError(
@@ -69,7 +69,9 @@ class LogseqClient:
         except aiohttp.ClientConnectionError as exc:
             raise LogseqConnectionError(f"Cannot connect to Logseq: {exc}") from exc
         except Exception as exc:
-            raise LogseqConnectionError(f"Unexpected error calling {method}: {exc}") from exc
+            raise LogseqConnectionError(
+                f"Unexpected error calling {method}: {exc}"
+            ) from exc
 
     # ── Page read operations ──────────────────────────────────────────────────
 
@@ -150,7 +152,9 @@ class LogseqClient:
 
         Complexity: O(N).
         """
-        result = await self._call("logseq.Editor.getPagesTreeFromNamespace", [namespace])
+        result = await self._call(
+            "logseq.Editor.getPagesTreeFromNamespace", [namespace]
+        )
         return result if result is not None else []
 
     # ── Page write operations ─────────────────────────────────────────────────
@@ -446,9 +450,7 @@ class LogseqClient:
                     result[uuid] = name
         return result
 
-    async def get_blocks_db_properties(
-        self, blocks: list[dict]
-    ) -> dict[str, dict]:
+    async def get_blocks_db_properties(self, blocks: list[dict]) -> dict[str, dict]:
         """Fetch DB-mode properties for a list of blocks.
 
         Args:
@@ -467,8 +469,7 @@ class LogseqClient:
             props = block.get("properties", {})
             if props:
                 result[str(uuid)] = {
-                    k: v for k, v in props.items()
-                    if not str(k).startswith(":logseq")
+                    k: v for k, v in props.items() if not str(k).startswith(":logseq")
                 }
         return result
 

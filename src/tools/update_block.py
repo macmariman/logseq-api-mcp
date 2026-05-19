@@ -8,8 +8,8 @@ from src.client.config import LogseqConfig, load_config
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -40,10 +40,12 @@ async def _run(
             return [TextContent(type="text", text=f"❌ Block '{block_uuid}' not found")]
 
         await client.update_block(block_uuid, content)
-        return [TextContent(
-            type="text",
-            text=f"✅ Block '{block_uuid}' updated successfully\n📝 New content: {content[:120]}"
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=f"✅ Block '{block_uuid}' updated successfully\n📝 New content: {content[:120]}",
+            )
+        ]
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)

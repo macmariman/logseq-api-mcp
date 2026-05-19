@@ -65,11 +65,13 @@ def _build_rows(graph_path: Path, chunk_size: int) -> List[dict]:
         except OSError:
             continue
         for i, chunk in enumerate(_chunk_text(text, chunk_size)):
-            rows.append({
-                "page": page_name,
-                "chunk_index": i,
-                "text": chunk,
-            })
+            rows.append(
+                {
+                    "page": page_name,
+                    "chunk_index": i,
+                    "text": chunk,
+                }
+            )
     return rows
 
 

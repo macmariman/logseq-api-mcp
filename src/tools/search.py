@@ -13,8 +13,8 @@ from src.tools.formatters.search import (
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -55,13 +55,23 @@ async def _run(
 
         if config.db_mode:
             text = format_search_results_db_mode(
-                result, query, limit, include_blocks, include_pages,
-                include_files, excluded_page_names,
+                result,
+                query,
+                limit,
+                include_blocks,
+                include_pages,
+                include_files,
+                excluded_page_names,
             )
         else:
             text = format_search_results_markdown_mode(
-                result, query, limit, include_blocks, include_pages,
-                include_files, excluded_page_names,
+                result,
+                query,
+                limit,
+                include_blocks,
+                include_pages,
+                include_files,
+                excluded_page_names,
             )
 
         return [TextContent(type="text", text=text)]
@@ -93,4 +103,12 @@ async def search(
     Complexity: O(N) where N is total result count.
     """
     cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, query, limit, include_blocks, include_pages, include_files)
+    return await _run(
+        LogseqClient(cfg),
+        cfg,
+        query,
+        limit,
+        include_blocks,
+        include_pages,
+        include_files,
+    )

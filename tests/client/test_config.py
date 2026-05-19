@@ -128,5 +128,6 @@ def test_logseq_client_passes_ssl_to_request():
     """verify_ssl from config is forwarded to aiohttp session.post(ssl=...)."""
     import inspect
     from src.client.logseq_client import LogseqClient
+
     source = inspect.getsource(LogseqClient._call)
     assert "verify_ssl" in source or "ssl" in source

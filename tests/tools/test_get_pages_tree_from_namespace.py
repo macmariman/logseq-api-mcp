@@ -7,19 +7,46 @@ from src.tools.get_pages_tree_from_namespace import _run
 _cfg = LogseqConfig("http://x", "t")
 
 _FLAT_TREE = [
-    {"originalName": "Project/Alpha", "name": "project/alpha", "uuid": "p1",
-     "journal?": False, "createdAt": 0, "updatedAt": 0, "children": []},
-    {"originalName": "Project/Beta", "name": "project/beta", "uuid": "p2",
-     "journal?": False, "createdAt": 0, "updatedAt": 0, "children": []},
+    {
+        "originalName": "Project/Alpha",
+        "name": "project/alpha",
+        "uuid": "p1",
+        "journal?": False,
+        "createdAt": 0,
+        "updatedAt": 0,
+        "children": [],
+    },
+    {
+        "originalName": "Project/Beta",
+        "name": "project/beta",
+        "uuid": "p2",
+        "journal?": False,
+        "createdAt": 0,
+        "updatedAt": 0,
+        "children": [],
+    },
 ]
 
 _NESTED_TREE = [
-    {"originalName": "Project", "name": "project", "uuid": "p0",
-     "journal?": False, "createdAt": 0, "updatedAt": 0,
-     "children": [
-         {"originalName": "Project/Alpha", "name": "project/alpha", "uuid": "p1",
-          "journal?": False, "createdAt": 0, "updatedAt": 0, "children": []},
-     ]},
+    {
+        "originalName": "Project",
+        "name": "project",
+        "uuid": "p0",
+        "journal?": False,
+        "createdAt": 0,
+        "updatedAt": 0,
+        "children": [
+            {
+                "originalName": "Project/Alpha",
+                "name": "project/alpha",
+                "uuid": "p1",
+                "journal?": False,
+                "createdAt": 0,
+                "updatedAt": 0,
+                "children": [],
+            },
+        ],
+    },
 ]
 
 

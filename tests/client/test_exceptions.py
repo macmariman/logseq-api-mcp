@@ -1,7 +1,5 @@
 """Tests for LogseqAPIError exception hierarchy."""
 
-import pytest
-
 from src.client.exceptions import (
     LogseqAPIError,
     LogseqAuthError,

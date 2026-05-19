@@ -7,10 +7,24 @@ from src.tools.get_pages_from_namespace import _run
 _cfg = LogseqConfig("http://x", "t")
 
 _NS_PAGES = [
-    {"id": 1, "uuid": "p1", "originalName": "Project/Alpha", "name": "project/alpha",
-     "journal?": False, "createdAt": 0, "updatedAt": 0},
-    {"id": 2, "uuid": "p2", "originalName": "Project/Beta", "name": "project/beta",
-     "journal?": False, "createdAt": 0, "updatedAt": 0},
+    {
+        "id": 1,
+        "uuid": "p1",
+        "originalName": "Project/Alpha",
+        "name": "project/alpha",
+        "journal?": False,
+        "createdAt": 0,
+        "updatedAt": 0,
+    },
+    {
+        "id": 2,
+        "uuid": "p2",
+        "originalName": "Project/Beta",
+        "name": "project/beta",
+        "journal?": False,
+        "createdAt": 0,
+        "updatedAt": 0,
+    },
 ]
 
 

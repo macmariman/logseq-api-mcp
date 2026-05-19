@@ -10,7 +10,9 @@ from src.client.logseq_client import LogseqClient
 
 @pytest.fixture
 def config():
-    return LogseqConfig(endpoint="http://localhost:12315/api", token="test-tok", db_mode=True)
+    return LogseqConfig(
+        endpoint="http://localhost:12315/api", token="test-tok", db_mode=True
+    )
 
 
 @pytest.fixture
@@ -25,6 +27,7 @@ def mock_call(client):
 
 
 # ── datascript_query ──────────────────────────────────────────────────────────
+
 
 async def test_datascript_query_sends_correct_payload(client, mock_call):
     mock_call.return_value = [[1], [2]]
@@ -43,6 +46,7 @@ async def test_datascript_query_returns_empty_list_on_none(client, mock_call):
 
 
 # ── resolve_page_uuids ────────────────────────────────────────────────────────
+
 
 async def test_resolve_page_uuids_batches_requests(client, mock_call):
     """One _call per UUID — result keyed by uuid."""
@@ -72,6 +76,7 @@ async def test_resolve_page_uuids_empty_input(client, mock_call):
 
 # ── get_blocks_db_properties ──────────────────────────────────────────────────
 
+
 async def test_get_blocks_db_properties_returns_keyed_dict(client, mock_call):
     blocks = [
         {"uuid": "b1", "properties": {"status": "done", "priority": "A"}},
@@ -96,6 +101,7 @@ async def test_get_blocks_db_properties_skips_blocks_without_uuid(client, mock_c
 
 
 # ── resolve_property_ident ────────────────────────────────────────────────────
+
 
 async def test_resolve_property_ident_returns_ident_on_match(client, mock_call):
     mock_call.return_value = [["status"]]

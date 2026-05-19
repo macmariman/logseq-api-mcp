@@ -8,8 +8,8 @@ from src.client.config import load_config
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -47,10 +47,17 @@ async def _run(
         if is_page_block is not None:
             options["isPageBlock"] = is_page_block
 
-        result = await client.append_block_in_page(page_identifier, content, options or None)
+        result = await client.append_block_in_page(
+            page_identifier, content, options or None
+        )
 
         if not result:
-            return [TextContent(type="text", text="❌ Failed to append block: No response from Logseq API")]
+            return [
+                TextContent(
+                    type="text",
+                    text="❌ Failed to append block: No response from Logseq API",
+                )
+            ]
 
         lines = [
             "✅ **BLOCK APPENDED SUCCESSFULLY**",

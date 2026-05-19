@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 import logging
 from dataclasses import dataclass, field
-from typing import Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +24,7 @@ _SEPARATOR = re.compile(r"^\|[-| :]+\|$")
 
 
 # ── Data structures ───────────────────────────────────────────────────────────
+
 
 @dataclass
 class BlockNode:
@@ -94,6 +94,7 @@ class ParsedContent:
 
 # ── Frontmatter extraction ────────────────────────────────────────────────────
 
+
 def _parse_frontmatter(text: str) -> tuple[dict, str]:
     """Extract YAML frontmatter and return (properties, remaining_text).
 
@@ -111,6 +112,7 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
 
     try:
         import yaml  # type: ignore[import]
+
         props = yaml.safe_load(match.group(1)) or {}
         if not isinstance(props, dict):
             props = {}
@@ -126,10 +128,11 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
             logger.debug("Frontmatter parse fallback failed: %s", exc)
             props = {}
 
-    return props, text[match.end():]
+    return props, text[match.end() :]
 
 
 # ── Indent helpers ────────────────────────────────────────────────────────────
+
 
 def _indent_level(spaces: str, tab_width: int = 2) -> int:
     """Return nesting level from a leading-whitespace string.
@@ -148,6 +151,7 @@ def _indent_level(spaces: str, tab_width: int = 2) -> int:
 
 
 # ── Main parser ───────────────────────────────────────────────────────────────
+
 
 class _Parser:
     """Stateful line-by-line parser converting markdown to a BlockNode tree.
@@ -282,9 +286,7 @@ class _Parser:
             i += 1
         return BlockNode(content="\n".join(block_lines)), i
 
-    def _parse_blockquote(
-        self, lines: list[str], start: int
-    ) -> tuple[BlockNode, int]:
+    def _parse_blockquote(self, lines: list[str], start: int) -> tuple[BlockNode, int]:
         """Collect contiguous blockquote lines into one block.
 
         Args:
@@ -303,9 +305,7 @@ class _Parser:
             i += 1
         return BlockNode(content="\n".join(collected)), i
 
-    def _parse_table(
-        self, lines: list[str], start: int
-    ) -> tuple[BlockNode, int]:
+    def _parse_table(self, lines: list[str], start: int) -> tuple[BlockNode, int]:
         """Collect contiguous table rows into one block.
 
         Args:
@@ -319,14 +319,14 @@ class _Parser:
         """
         collected: list[str] = []
         i = start
-        while i < len(lines) and (_TABLE_ROW.match(lines[i]) or _SEPARATOR.match(lines[i])):
+        while i < len(lines) and (
+            _TABLE_ROW.match(lines[i]) or _SEPARATOR.match(lines[i])
+        ):
             collected.append(lines[i])
             i += 1
         return BlockNode(content="\n".join(collected)), i
 
-    def _parse_paragraph(
-        self, lines: list[str], start: int
-    ) -> tuple[BlockNode, int]:
+    def _parse_paragraph(self, lines: list[str], start: int) -> tuple[BlockNode, int]:
         """Collect consecutive non-special lines into a single paragraph block.
 
         Args:
@@ -451,6 +451,7 @@ class _Parser:
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 def parse_content(markdown: str) -> ParsedContent:
     """Parse a markdown string into a ParsedContent tree.

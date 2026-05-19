@@ -61,8 +61,8 @@ def _format_linking_page(
     return lines
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -87,11 +87,21 @@ async def _run(
         _log.debug("%s called", __name__)
         linked_refs = await client.get_page_linked_references(page_identifier)
         if not linked_refs:
-            return [TextContent(type="text", text=f"✅ No pages link to '{page_identifier}'")]
+            return [
+                TextContent(
+                    type="text", text=f"✅ No pages link to '{page_identifier}'"
+                )
+            ]
 
         all_pages = await client.get_all_pages()
-        visible_pages = filter_pages(all_pages, config.exclude_tags) if config.exclude_tags else all_pages
-        visible_ids = {p.get("id") for p in visible_pages if isinstance(p, dict) and p.get("id")}
+        visible_pages = (
+            filter_pages(all_pages, config.exclude_tags)
+            if config.exclude_tags
+            else all_pages
+        )
+        visible_ids = {
+            p.get("id") for p in visible_pages if isinstance(p, dict) and p.get("id")
+        }
         page_lookup = {
             p.get("id"): p for p in all_pages if isinstance(p, dict) and p.get("id")
         }
@@ -106,13 +116,17 @@ async def _run(
             if config.exclude_tags and page_ref.get("id") not in visible_ids:
                 continue
             ref_blocks = [b for b in group[1:] if isinstance(b, dict)]
-            enriched.append({
-                "ref": page_ref,
-                "full": page_lookup.get(page_ref.get("id")),
-                "blocks": ref_blocks,
-            })
+            enriched.append(
+                {
+                    "ref": page_ref,
+                    "full": page_lookup.get(page_ref.get("id")),
+                    "blocks": ref_blocks,
+                }
+            )
 
-        enriched.sort(key=lambda e: (-len(e["blocks"]), (e["ref"].get("name") or "").lower()))
+        enriched.sort(
+            key=lambda e: (-len(e["blocks"]), (e["ref"].get("name") or "").lower())
+        )
 
         lines = [
             "🔗 **PAGE BACKLINKS**",
@@ -123,27 +137,33 @@ async def _run(
             "",
         ]
         for entry in enriched:
-            lines.extend(_format_linking_page(
-                entry["ref"], entry["full"], entry["blocks"], include_content
-            ))
+            lines.extend(
+                _format_linking_page(
+                    entry["ref"], entry["full"], entry["blocks"], include_content
+                )
+            )
 
         journal_count = sum(
             1 for e in enriched if (e["full"] or {}).get("journal?", False)
         )
         total_refs = sum(len(e["blocks"]) for e in enriched)
-        lines.extend([
-            "📈 **SUMMARY:**",
-            f"• Total linking pages: {len(enriched)}",
-            f"• Journal pages: {journal_count}",
-            f"• Regular pages: {len(enriched) - journal_count}",
-            f"• Total references: {total_refs}",
-        ])
+        lines.extend(
+            [
+                "📈 **SUMMARY:**",
+                f"• Total linking pages: {len(enriched)}",
+                f"• Journal pages: {journal_count}",
+                f"• Regular pages: {len(enriched) - journal_count}",
+                f"• Total references: {total_refs}",
+            ]
+        )
 
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
-        return [TextContent(type="text", text=f"❌ Error fetching page backlinks: {exc}")]
+        return [
+            TextContent(type="text", text=f"❌ Error fetching page backlinks: {exc}")
+        ]
 
 
 async def get_page_backlinks(

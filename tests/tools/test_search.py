@@ -9,9 +9,7 @@ _cfg_db = LogseqConfig("http://x", "t", db_mode=True)
 _cfg_excl = LogseqConfig("http://x", "t", exclude_tags=("private",))
 
 _SEARCH_RESULT = {
-    "blocks": [
-        {"block/content": "matching block content", "uuid": "b1", "page": 1}
-    ],
+    "blocks": [{"block/content": "matching block content", "uuid": "b1", "page": 1}],
     "pages": ["Public Page", "Another Page"],
     "pages-content": [
         {"block/snippet": "snippet of Public Page"},
@@ -39,9 +37,16 @@ class TestSearch:
 
     async def test_search_excludes_restricted_pages(self):
         pages = [
-            {"id": 1, "uuid": "p1", "name": "secret", "originalName": "Secret",
-             "journal?": False, "createdAt": 0, "updatedAt": 0,
-             "properties": {"tags": ["private"]}},
+            {
+                "id": 1,
+                "uuid": "p1",
+                "name": "secret",
+                "originalName": "Secret",
+                "journal?": False,
+                "createdAt": 0,
+                "updatedAt": 0,
+                "properties": {"tags": ["private"]},
+            },
         ]
         search_result = {
             "blocks": [],
@@ -58,7 +63,12 @@ class TestSearch:
         db_result = {
             "blocks": [
                 {"page?": True, "fullTitle": "DB Page", "uuid": "p1"},
-                {"page?": False, "content": "DB block content", "uuid": "b1", "page": "p1"},
+                {
+                    "page?": False,
+                    "content": "DB block content",
+                    "uuid": "b1",
+                    "page": "p1",
+                },
             ],
             "files": [],
         }
@@ -68,8 +78,16 @@ class TestSearch:
         assert "DB block content" in result[0].text
 
     async def test_search_limit_respected(self):
-        blocks = [{"block/content": f"block {i}", "uuid": f"b{i}", "page": 1} for i in range(50)]
-        search_result = {"blocks": blocks, "pages": [], "pages-content": [], "files": []}
+        blocks = [
+            {"block/content": f"block {i}", "uuid": f"b{i}", "page": 1}
+            for i in range(50)
+        ]
+        search_result = {
+            "blocks": blocks,
+            "pages": [],
+            "pages-content": [],
+            "files": [],
+        }
         client = FakeLogseqClient({"search": search_result, "get_all_pages": []})
         result = await _run(client, _cfg, "block", limit=5)
         text = result[0].text

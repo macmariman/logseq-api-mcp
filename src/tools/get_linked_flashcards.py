@@ -51,22 +51,24 @@ def _find_flashcards_in_blocks(blocks: list[dict], page_info: dict) -> list[dict
             continue
         content = block.get("content", "")
         if "#card" in content:
-            flashcards.append({
-                "block_id": block.get("id"),
-                "block_uuid": block.get("uuid"),
-                "content": content,
-                "properties": block.get("properties", {}),
-                "children": block.get("children", []),
-                "page": page_info,
-            })
+            flashcards.append(
+                {
+                    "block_id": block.get("id"),
+                    "block_uuid": block.get("uuid"),
+                    "content": content,
+                    "properties": block.get("properties", {}),
+                    "children": block.get("children", []),
+                    "page": page_info,
+                }
+            )
         children = block.get("children", [])
         if children:
             flashcards.extend(_find_flashcards_in_blocks(children, page_info))
     return flashcards
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
     """Find and format flashcards from a page and its links using an injected client.
@@ -101,7 +103,11 @@ async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
 
         target_page = page_lookup.get(page_identifier.lower())
         if not target_page:
-            return [TextContent(type="text", text=f"❌ Target page '{page_identifier}' not found")]
+            return [
+                TextContent(
+                    type="text", text=f"❌ Target page '{page_identifier}' not found"
+                )
+            ]
 
         pages_to_search: list[dict] = [target_page]
         for group in linked_refs:
@@ -122,10 +128,12 @@ async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
                 all_flashcards.extend(_find_flashcards_in_blocks(blocks, page))
 
         if not all_flashcards:
-            return [TextContent(
-                type="text",
-                text=f"✅ No flashcards found in '{page_identifier}' or its linked pages",
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"✅ No flashcards found in '{page_identifier}' or its linked pages",
+                )
+            ]
 
         enriched: list[dict] = []
         for fc in all_flashcards:
@@ -137,23 +145,28 @@ async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
                     if child_block:
                         answer_content = child_block.get("content", "").strip()
                         if answer_content:
-                            answers.append({
-                                "content": answer_content,
-                                "block_id": child_block.get("id"),
-                                "block_uuid": child_block.get("uuid"),
-                            })
-            enriched.append({
-                "question": question,
-                "answers": answers,
-                "properties": fc["properties"],
-                "block_id": fc["block_id"],
-                "block_uuid": fc["block_uuid"],
-                "page": {
-                    "name": fc["page"].get("originalName") or fc["page"].get("name"),
-                    "id": fc["page"].get("id"),
-                    "uuid": fc["page"].get("uuid"),
-                },
-            })
+                            answers.append(
+                                {
+                                    "content": answer_content,
+                                    "block_id": child_block.get("id"),
+                                    "block_uuid": child_block.get("uuid"),
+                                }
+                            )
+            enriched.append(
+                {
+                    "question": question,
+                    "answers": answers,
+                    "properties": fc["properties"],
+                    "block_id": fc["block_id"],
+                    "block_uuid": fc["block_uuid"],
+                    "page": {
+                        "name": fc["page"].get("originalName")
+                        or fc["page"].get("name"),
+                        "id": fc["page"].get("id"),
+                        "uuid": fc["page"].get("uuid"),
+                    },
+                }
+            )
 
         enriched.sort(key=lambda f: (f["page"]["name"] or "", f["block_id"] or 0))
 
@@ -176,39 +189,47 @@ async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
         for p_name, fcs in by_page.items():
             lines.extend([f"📚 **{p_name}** ({len(fcs)} flashcards)", ""])
             for i, fc in enumerate(fcs, 1):
-                lines.extend([
-                    f"💡 **Flashcard {i}**",
-                    f"   🔑 Block ID: {fc['block_id']} | UUID: {fc['block_uuid']}",
-                    f"   📄 Page: {fc['page']['name']} (ID: {fc['page']['id']})",
-                    "",
-                    f"   ❓ **QUESTION:**",
-                    f"   {fc['question']}",
-                    "",
-                ])
+                lines.extend(
+                    [
+                        f"💡 **Flashcard {i}**",
+                        f"   🔑 Block ID: {fc['block_id']} | UUID: {fc['block_uuid']}",
+                        f"   📄 Page: {fc['page']['name']} (ID: {fc['page']['id']})",
+                        "",
+                        "   ❓ **QUESTION:**",
+                        f"   {fc['question']}",
+                        "",
+                    ]
+                )
                 if fc["answers"]:
                     lines.append("   💡 **ANSWERS:**")
                     for j, ans in enumerate(fc["answers"], 1):
-                        lines.extend([
-                            f"   {j}. {ans['content']}",
-                            f"      └─ Block ID: {ans['block_id']} | UUID: {ans['block_uuid']}",
-                        ])
+                        lines.extend(
+                            [
+                                f"   {j}. {ans['content']}",
+                                f"      └─ Block ID: {ans['block_id']} | UUID: {ans['block_uuid']}",
+                            ]
+                        )
                 else:
                     lines.append("   💡 **ANSWERS:** No answer blocks found")
                 lines.append("")
 
         total_answers = sum(len(fc["answers"]) for fc in enriched)
-        lines.extend([
-            "📊 **SUMMARY:**",
-            f"• Total flashcards: {len(enriched)}",
-            f"• Total answer blocks: {total_answers}",
-            f"• Pages with flashcards: {len(by_page)}",
-        ])
+        lines.extend(
+            [
+                "📊 **SUMMARY:**",
+                f"• Total flashcards: {len(enriched)}",
+                f"• Total answer blocks: {total_answers}",
+                f"• Pages with flashcards: {len(by_page)}",
+            ]
+        )
 
         return [TextContent(type="text", text="\n".join(lines))]
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
-        return [TextContent(type="text", text=f"❌ Error fetching linked flashcards: {exc}")]
+        return [
+            TextContent(type="text", text=f"❌ Error fetching linked flashcards: {exc}")
+        ]
 
 
 async def get_linked_flashcards(page_identifier: str) -> List[TextContent]:

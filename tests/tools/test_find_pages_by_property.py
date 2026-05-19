@@ -6,8 +6,18 @@ from src.tools.find_pages_by_property import _run
 
 _cfg = LogseqConfig("http://x", "t")
 
-_STATUS_PAGE = {"originalName": "Task A", "name": "task-a", "uuid": "p1", "journal?": False}
-_OTHER_PAGE  = {"originalName": "Task B", "name": "task-b", "uuid": "p2", "journal?": False}
+_STATUS_PAGE = {
+    "originalName": "Task A",
+    "name": "task-a",
+    "uuid": "p1",
+    "journal?": False,
+}
+_OTHER_PAGE = {
+    "originalName": "Task B",
+    "name": "task-b",
+    "uuid": "p2",
+    "journal?": False,
+}
 
 
 class TestFindPagesByProperty:
@@ -34,8 +44,15 @@ class TestFindPagesByProperty:
         assert "0" in result[0].text or "no" in result[0].text.lower()
 
     async def test_find_limit_respected(self):
-        pages = [{"originalName": f"Page {i}", "name": f"page-{i}", "uuid": f"p{i}",
-                  "journal?": False} for i in range(50)]
+        pages = [
+            {
+                "originalName": f"Page {i}",
+                "name": f"page-{i}",
+                "uuid": f"p{i}",
+                "journal?": False,
+            }
+            for i in range(50)
+        ]
         client = FakeLogseqClient({"query_dsl": pages})
         result = await _run(client, _cfg, "status", limit=5)
         assert "Page 0" in result[0].text

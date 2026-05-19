@@ -19,6 +19,7 @@ def resolve_uuid_refs(content: str, uuid_map: dict[str, str]) -> str:
 
     Complexity: O(C) where C is content length.
     """
+
     def _replace(match: re.Match) -> str:
         uuid = match.group(1)
         name = uuid_map.get(uuid)

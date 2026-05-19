@@ -1,7 +1,5 @@
 """Tests for vector graph sync."""
 
-import time
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -29,6 +27,7 @@ def vector_config(tmp_path, graph_dir):
 
 
 # --- pure helpers ---
+
 
 def test_chunk_text_splits_long_text():
     text = "word " * 200
@@ -59,6 +58,7 @@ def test_iter_markdown_files_ignores_non_md(tmp_path):
 
 
 # --- sync_graph (with lancedb mocked) ---
+
 
 def test_sync_graph_creates_db_and_inserts_rows(vector_config):
     mock_table = MagicMock()

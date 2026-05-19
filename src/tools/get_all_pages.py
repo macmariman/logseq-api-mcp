@@ -10,8 +10,8 @@ from src.tools.formatters.pages import format_pages_listing
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,

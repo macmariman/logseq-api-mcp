@@ -11,8 +11,8 @@ from src.tools.formatters.blocks import collect_block_uuids, format_block_tree
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -43,15 +43,21 @@ async def _run(
         blocks = await client.get_page_blocks_tree(page_identifier)
 
         if not page and not blocks:
-            return [TextContent(type="text", text=f"❌ Page '{page_identifier}' not found")]
+            return [
+                TextContent(type="text", text=f"❌ Page '{page_identifier}' not found")
+            ]
 
         if config.exclude_tags and page and is_page_excluded(page, config.exclude_tags):
-            return [TextContent(
-                type="text",
-                text=f"❌ Access denied: page '{page_identifier}' is excluded by tag policy"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Access denied: page '{page_identifier}' is excluded by tag policy",
+                )
+            ]
 
-        page_name = (page or {}).get("originalName") or (page or {}).get("name", page_identifier)
+        page_name = (page or {}).get("originalName") or (page or {}).get(
+            "name", page_identifier
+        )
         page_id = (page or {}).get("id", "N/A")
         page_uuid = (page or {}).get("uuid", "N/A")
 
@@ -62,6 +68,7 @@ async def _run(
                 uuid_map = await client.resolve_page_uuids(list(uuids))
 
         if fmt == "json":
+
             def _block_to_dict(block: dict, depth: int) -> dict:
                 if max_depth != -1 and depth > max_depth:
                     return {}
@@ -83,7 +90,9 @@ async def _run(
                 },
                 "blocks": [_block_to_dict(b, 0) for b in blocks],
             }
-            return [TextContent(type="text", text=json.dumps(payload, ensure_ascii=False))]
+            return [
+                TextContent(type="text", text=json.dumps(payload, ensure_ascii=False))
+            ]
 
         lines = [
             "📖 **PAGE CONTENT**",
@@ -99,7 +108,11 @@ async def _run(
             lines.append("[No content]")
         else:
             for block in blocks:
-                lines.extend(format_block_tree(block, level=0, max_level=max_depth, uuid_map=uuid_map or None))
+                lines.extend(
+                    format_block_tree(
+                        block, level=0, max_level=max_depth, uuid_map=uuid_map or None
+                    )
+                )
 
         return [TextContent(type="text", text="\n".join(lines))]
 
@@ -128,4 +141,6 @@ async def get_all_page_content(
     Complexity: O(N) where N is total block count.
     """
     cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, page_identifier, fmt, max_depth, resolve_refs)
+    return await _run(
+        LogseqClient(cfg), cfg, page_identifier, fmt, max_depth, resolve_refs
+    )

@@ -10,6 +10,7 @@ from src.client.config import LogseqConfig
 
 # ── Legacy fixtures (kept for compatibility) ─────────────────────────────────
 
+
 @pytest.fixture
 def mock_env_vars():
     """Mock environment variables for testing."""
@@ -87,6 +88,7 @@ def sample_block_data():
 
 # ── New fixtures: FakeLogseqClient ────────────────────────────────────────────
 
+
 class FakeLogseqClient:
     """In-memory test double for LogseqClient.
 
@@ -130,8 +132,12 @@ class FakeLogseqClient:
     # ── Page write ────────────────────────────────────────────────────────────
 
     async def create_page(self, title: str, properties=None, fmt=None) -> dict:
-        self.calls.append(("create_page", (title,), {"properties": properties, "fmt": fmt}))
-        return self.responses.get("create_page", {"id": 1, "uuid": "new-uuid", "originalName": title})
+        self.calls.append(
+            ("create_page", (title,), {"properties": properties, "fmt": fmt})
+        )
+        return self.responses.get(
+            "create_page", {"id": 1, "uuid": "new-uuid", "originalName": title}
+        )
 
     async def delete_page(self, page_name: str) -> None:
         self.calls.append(("delete_page", (page_name,), {}))
@@ -140,25 +146,39 @@ class FakeLogseqClient:
         self.calls.append(("rename_page", (old_name, new_name), {}))
 
     async def set_page_properties(self, page_name: str, properties: dict) -> None:
-        self.calls.append(("set_page_properties", (page_name,), {"properties": properties}))
+        self.calls.append(
+            ("set_page_properties", (page_name,), {"properties": properties})
+        )
 
     # ── Block read ────────────────────────────────────────────────────────────
 
-    async def get_block(self, block_uuid: str, include_children: bool = True) -> dict | None:
-        self.calls.append(("get_block", (block_uuid,), {"include_children": include_children}))
+    async def get_block(
+        self, block_uuid: str, include_children: bool = True
+    ) -> dict | None:
+        self.calls.append(
+            ("get_block", (block_uuid,), {"include_children": include_children})
+        )
         return self.responses.get("get_block")
 
     # ── Block write ───────────────────────────────────────────────────────────
 
-    async def append_block_in_page(self, page_identifier: str, content: str, options=None) -> dict:
+    async def append_block_in_page(
+        self, page_identifier: str, content: str, options=None
+    ) -> dict:
         self.calls.append(("append_block_in_page", (page_identifier, content), {}))
         return self.responses.get("append_block_in_page", {"uuid": "new-block-uuid"})
 
-    async def insert_block(self, parent_uuid: str, content: str, properties=None, sibling: bool = False) -> dict:
-        self.calls.append(("insert_block", (parent_uuid, content), {"sibling": sibling}))
+    async def insert_block(
+        self, parent_uuid: str, content: str, properties=None, sibling: bool = False
+    ) -> dict:
+        self.calls.append(
+            ("insert_block", (parent_uuid, content), {"sibling": sibling})
+        )
         return self.responses.get("insert_block", {"uuid": "inserted-uuid"})
 
-    async def insert_batch_block(self, src_block_uuid: str, blocks: list, sibling: bool = True) -> list:
+    async def insert_batch_block(
+        self, src_block_uuid: str, blocks: list, sibling: bool = True
+    ) -> list:
         self.calls.append(("insert_batch_block", (src_block_uuid,), {"blocks": blocks}))
         return self.responses.get("insert_batch_block", [])
 
@@ -168,11 +188,19 @@ class FakeLogseqClient:
     async def delete_block(self, block_uuid: str) -> None:
         self.calls.append(("delete_block", (block_uuid,), {}))
 
-    async def upsert_block_property(self, block_uuid: str, key: str, value: object) -> None:
+    async def upsert_block_property(
+        self, block_uuid: str, key: str, value: object
+    ) -> None:
         self.calls.append(("upsert_block_property", (block_uuid, key, value), {}))
 
-    async def edit_block(self, block_uuid: str, content=None, properties=None,
-                         cursor_pos=None, focus=None) -> dict:
+    async def edit_block(
+        self,
+        block_uuid: str,
+        content=None,
+        properties=None,
+        cursor_pos=None,
+        focus=None,
+    ) -> dict:
         self.calls.append(("edit_block", (block_uuid,), {"content": content}))
         return self.responses.get("edit_block", {"uuid": block_uuid})
 

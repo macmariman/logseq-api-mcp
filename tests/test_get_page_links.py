@@ -6,42 +6,70 @@ from src.tools.get_page_links import _run
 
 _cfg = LogseqConfig("http://x", "t")
 
-_LINKING_PAGE = {"id": 10, "uuid": "p1", "name": "linking-page", "originalName": "Linking Page",
-                  "journal?": False, "createdAt": 0, "updatedAt": 0}
+_LINKING_PAGE = {
+    "id": 10,
+    "uuid": "p1",
+    "name": "linking-page",
+    "originalName": "Linking Page",
+    "journal?": False,
+    "createdAt": 0,
+    "updatedAt": 0,
+}
 
 
 class TestGetPageLinks:
     async def test_returns_analysis_when_links_found(self):
         linked_refs = [
-            [{"id": 10, "name": "linking-page", "originalName": "Linking Page"},
-             {"uuid": "b1", "content": "ref"}],
+            [
+                {"id": 10, "name": "linking-page", "originalName": "Linking Page"},
+                {"uuid": "b1", "content": "ref"},
+            ],
         ]
-        client = FakeLogseqClient({
-            "get_page_linked_references": linked_refs,
-            "get_all_pages": [_LINKING_PAGE],
-        })
+        client = FakeLogseqClient(
+            {
+                "get_page_linked_references": linked_refs,
+                "get_all_pages": [_LINKING_PAGE],
+            }
+        )
         result = await _run(client, _cfg, "Target Page")
         assert "PAGE BACKLINKS" in result[0].text
         assert "Linking Page" in result[0].text
 
     async def test_no_links_returns_message(self):
-        client = FakeLogseqClient({
-            "get_page_linked_references": [],
-            "get_all_pages": [],
-        })
+        client = FakeLogseqClient(
+            {
+                "get_page_linked_references": [],
+                "get_all_pages": [],
+            }
+        )
         result = await _run(client, _cfg, "Isolated Page")
         assert "No pages link to" in result[0].text
 
     async def test_reference_count_shown(self):
         linked_refs = [
-            [{"id": 10, "name": "pg"},
-             {"uuid": "b1", "content": "x"}, {"uuid": "b2", "content": "y"}, {"uuid": "b3", "content": "z"}],
+            [
+                {"id": 10, "name": "pg"},
+                {"uuid": "b1", "content": "x"},
+                {"uuid": "b2", "content": "y"},
+                {"uuid": "b3", "content": "z"},
+            ],
         ]
-        client = FakeLogseqClient({
-            "get_page_linked_references": linked_refs,
-            "get_all_pages": [{"id": 10, "uuid": "x", "name": "pg", "originalName": "Pg",
-                               "journal?": False, "createdAt": 0, "updatedAt": 0}],
-        })
+        client = FakeLogseqClient(
+            {
+                "get_page_linked_references": linked_refs,
+                "get_all_pages": [
+                    {
+                        "id": 10,
+                        "uuid": "x",
+                        "name": "pg",
+                        "originalName": "Pg",
+                        "journal?": False,
+                        "createdAt": 0,
+                        "updatedAt": 0,
+                    }
+                ],
+            }
+        )
         result = await _run(client, _cfg, "Target")
         assert "References: 3" in result[0].text
 

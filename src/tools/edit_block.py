@@ -8,8 +8,8 @@ from src.client.config import load_config
 from src.logging_setup import get_logger
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -45,9 +45,18 @@ async def _run(
         )
 
         if not result and result != {}:
-            return [TextContent(type="text", text="❌ Failed to edit block: No response from Logseq API")]
+            return [
+                TextContent(
+                    type="text",
+                    text="❌ Failed to edit block: No response from Logseq API",
+                )
+            ]
 
-        lines = ["✅ **BLOCK EDITED SUCCESSFULLY**", f"🔗 Block UUID: {block_identity}", ""]
+        lines = [
+            "✅ **BLOCK EDITED SUCCESSFULLY**",
+            f"🔗 Block UUID: {block_identity}",
+            "",
+        ]
 
         edit_details = []
         if content is not None:
@@ -60,18 +69,22 @@ async def _run(
             edit_details.append(f"🎯 Focus: {'Enabled' if focus else 'Disabled'}")
 
         if edit_details:
-            lines.extend(["📊 **EDIT DETAILS:**", *[f"• {d}" for d in edit_details], ""])
+            lines.extend(
+                ["📊 **EDIT DETAILS:**", *[f"• {d}" for d in edit_details], ""]
+            )
 
         if content is not None:
             preview = content[:100] + "..." if len(content) > 100 else content
             lines.extend(["📝 **UPDATED CONTENT:**", "```", preview, "```", ""])
 
         if properties is not None:
-            lines.extend([
-                "⚙️ **UPDATED PROPERTIES:**",
-                *[f"• {k}: {v}" for k, v in properties.items()],
-                "",
-            ])
+            lines.extend(
+                [
+                    "⚙️ **UPDATED PROPERTIES:**",
+                    *[f"• {k}: {v}" for k, v in properties.items()],
+                    "",
+                ]
+            )
 
         return [TextContent(type="text", text="\n".join(lines))]
 

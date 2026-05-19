@@ -12,8 +12,8 @@ from src.logging_setup import get_logger
 _VALID_PROP_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 
-
 _log = get_logger(__name__)
+
 
 async def _run(
     client: LogseqClient,
@@ -39,14 +39,18 @@ async def _run(
     try:
         _log.debug("%s called", __name__)
         if not _VALID_PROP_RE.match(property_name):
-            return [TextContent(
-                type="text",
-                text=f"❌ Invalid property name '{property_name}': only letters, digits, hyphens, and underscores are allowed"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Invalid property name '{property_name}': only letters, digits, hyphens, and underscores are allowed",
+                )
+            ]
 
         if property_value is not None:
             safe_value = property_value.replace('"', '\\"')
-            dsl_query = f'[:find (pull ?p [*]) :where [?p :{property_name} "{safe_value}"]]'
+            dsl_query = (
+                f'[:find (pull ?p [*]) :where [?p :{property_name} "{safe_value}"]]'
+            )
         else:
             dsl_query = f"[:find (pull ?p [*]) :where [?p :{property_name} _]]"
 
@@ -57,8 +61,10 @@ async def _run(
             visible = filter_pages(all_pages, config.exclude_tags)
             visible_names = {(p.get("name") or "").lower() for p in visible}
             items = [
-                it for it in items
-                if (it.get("name") or it.get("originalName") or "").lower() in visible_names
+                it
+                for it in items
+                if (it.get("name") or it.get("originalName") or "").lower()
+                in visible_names
             ]
 
         items = items[:limit]
@@ -75,7 +81,11 @@ async def _run(
             lines.append("*(No pages found with this property)*")
         else:
             for item in items:
-                name = item.get("originalName") or item.get("name") or str(item.get("uuid", "?"))
+                name = (
+                    item.get("originalName")
+                    or item.get("name")
+                    or str(item.get("uuid", "?"))
+                )
                 uuid = item.get("uuid", "")
                 lines.append(f"• 📄 {name}")
                 if uuid:
@@ -85,7 +95,9 @@ async def _run(
 
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
-        return [TextContent(type="text", text=f"❌ Error finding pages by property: {exc}")]
+        return [
+            TextContent(type="text", text=f"❌ Error finding pages by property: {exc}")
+        ]
 
 
 async def find_pages_by_property(

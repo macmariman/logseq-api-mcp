@@ -24,12 +24,25 @@ class TestGetPageBlocks:
         assert "Total blocks: 2" in result[0].text
 
     async def test_nested_children_shown(self):
-        blocks = [{
-            "id": 1, "uuid": "p", "content": "Parent block",
-            "level": 1, "page": {"id": 1, "name": "P"}, "properties": {}, "children": [
-                {"id": 2, "uuid": "c", "content": "Child block", "level": 2, "children": []}
-            ]
-        }]
+        blocks = [
+            {
+                "id": 1,
+                "uuid": "p",
+                "content": "Parent block",
+                "level": 1,
+                "page": {"id": 1, "name": "P"},
+                "properties": {},
+                "children": [
+                    {
+                        "id": 2,
+                        "uuid": "c",
+                        "content": "Child block",
+                        "level": 2,
+                        "children": [],
+                    }
+                ],
+            }
+        ]
         client = FakeLogseqClient({"get_page_blocks_tree": blocks})
         result = await _run(client, "My Page")
         assert "Parent block" in result[0].text

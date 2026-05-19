@@ -33,6 +33,9 @@ vector = [
     "portalocker>=2.0",
 ]
 
+[project.scripts]
+logseq-sync = "src.vector.sync:cli_entry"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

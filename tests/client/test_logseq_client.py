@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.client.config import LogseqConfig
-from src.client.exceptions import LogseqAPIError, LogseqAuthError, LogseqNotFoundError
+from src.client.exceptions import LogseqAPIError, LogseqAuthError
 from src.client.logseq_client import LogseqClient
 
 
@@ -26,6 +26,7 @@ def mock_call(client):
 
 # ── get_all_pages ────────────────────────────────────────────────────────────
 
+
 async def test_get_all_pages_calls_correct_method(client, mock_call):
     mock_call.return_value = [{"id": 1, "name": "Test"}]
     result = await client.get_all_pages()
@@ -40,6 +41,7 @@ async def test_get_all_pages_returns_empty_list_on_none(client, mock_call):
 
 
 # ── get_page ─────────────────────────────────────────────────────────────────
+
 
 async def test_get_page_calls_correct_method(client, mock_call):
     mock_call.return_value = {"id": 1, "name": "My Page"}
@@ -56,6 +58,7 @@ async def test_get_page_returns_none_on_none_response(client, mock_call):
 
 # ── get_page_blocks_tree ──────────────────────────────────────────────────────
 
+
 async def test_get_page_blocks_tree(client, mock_call):
     mock_call.return_value = [{"content": "Block 1"}]
     result = await client.get_page_blocks_tree("My Page")
@@ -71,6 +74,7 @@ async def test_get_page_blocks_tree_returns_empty_on_none(client, mock_call):
 
 # ── delete_page ───────────────────────────────────────────────────────────────
 
+
 async def test_delete_page_calls_correct_method(client, mock_call):
     mock_call.return_value = True
     await client.delete_page("My Page")
@@ -79,13 +83,17 @@ async def test_delete_page_calls_correct_method(client, mock_call):
 
 # ── rename_page ───────────────────────────────────────────────────────────────
 
+
 async def test_rename_page_calls_correct_method(client, mock_call):
     mock_call.return_value = True
     await client.rename_page("Old Name", "New Name")
-    mock_call.assert_awaited_once_with("logseq.Editor.renamePage", ["Old Name", "New Name"])
+    mock_call.assert_awaited_once_with(
+        "logseq.Editor.renamePage", ["Old Name", "New Name"]
+    )
 
 
 # ── search ────────────────────────────────────────────────────────────────────
+
 
 async def test_search_with_no_options(client, mock_call):
     mock_call.return_value = {"blocks": []}
@@ -107,6 +115,7 @@ async def test_search_returns_empty_dict_on_none(client, mock_call):
 
 # ── query_dsl ─────────────────────────────────────────────────────────────────
 
+
 async def test_query_dsl_calls_correct_method(client, mock_call):
     mock_call.return_value = [{"name": "Page A"}]
     result = await client.query_dsl("(page-property status active)")
@@ -122,13 +131,17 @@ async def test_query_dsl_returns_empty_list_on_none(client, mock_call):
 
 # ── update_block ──────────────────────────────────────────────────────────────
 
+
 async def test_update_block_calls_correct_method(client, mock_call):
     mock_call.return_value = None
     await client.update_block("uuid-123", "new content")
-    mock_call.assert_awaited_once_with("logseq.Editor.updateBlock", ["uuid-123", "new content"])
+    mock_call.assert_awaited_once_with(
+        "logseq.Editor.updateBlock", ["uuid-123", "new content"]
+    )
 
 
 # ── delete_block ──────────────────────────────────────────────────────────────
+
 
 async def test_delete_block_calls_correct_method(client, mock_call):
     mock_call.return_value = None
@@ -137,6 +150,7 @@ async def test_delete_block_calls_correct_method(client, mock_call):
 
 
 # ── append_block_in_page ──────────────────────────────────────────────────────
+
 
 async def test_append_block_in_page_calls_correct_method(client, mock_call):
     mock_call.return_value = {"uuid": "new-uuid"}
@@ -149,6 +163,7 @@ async def test_append_block_in_page_calls_correct_method(client, mock_call):
 
 # ── insert_block ──────────────────────────────────────────────────────────────
 
+
 async def test_insert_block_as_child(client, mock_call):
     mock_call.return_value = {"uuid": "child-uuid"}
     result = await client.insert_block("parent-uuid", "child content", sibling=False)
@@ -159,6 +174,7 @@ async def test_insert_block_as_child(client, mock_call):
 
 
 # ── get_block ─────────────────────────────────────────────────────────────────
+
 
 async def test_get_block_with_children(client, mock_call):
     mock_call.return_value = {"uuid": "b1", "content": "text", "children": []}
@@ -173,6 +189,7 @@ async def test_get_block_returns_none_on_none(client, mock_call):
 
 
 # ── _call HTTP error handling ─────────────────────────────────────────────────
+
 
 def _make_session_mock(mock_response: MagicMock):
     """Build a properly-shaped aiohttp.ClientSession mock."""

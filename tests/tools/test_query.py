@@ -7,8 +7,17 @@ from src.tools.query import _run
 _cfg = LogseqConfig("http://x", "t")
 _cfg_excl = LogseqConfig("http://x", "t", exclude_tags=("private",))
 
-_PAGE_RESULT = {"originalName": "My Page", "name": "my-page", "uuid": "p1", "journal?": False}
-_BLOCK_RESULT = {"content": "block content", "uuid": "b2", "page": {"name": "other", "originalName": "Other"}}
+_PAGE_RESULT = {
+    "originalName": "My Page",
+    "name": "my-page",
+    "uuid": "p1",
+    "journal?": False,
+}
+_BLOCK_RESULT = {
+    "content": "block content",
+    "uuid": "b2",
+    "page": {"name": "other", "originalName": "Other"},
+}
 
 
 class TestQuery:
@@ -31,11 +40,24 @@ class TestQuery:
 
     async def test_query_applies_exclude_tags(self):
         pages = [
-            {"id": 1, "uuid": "p1", "name": "secret", "originalName": "Secret",
-             "journal?": False, "createdAt": 0, "updatedAt": 0,
-             "properties": {"tags": ["private"]}},
+            {
+                "id": 1,
+                "uuid": "p1",
+                "name": "secret",
+                "originalName": "Secret",
+                "journal?": False,
+                "createdAt": 0,
+                "updatedAt": 0,
+                "properties": {"tags": ["private"]},
+            },
         ]
-        items = [{"page": {"name": "secret", "originalName": "Secret"}, "content": "x", "uuid": "b1"}]
+        items = [
+            {
+                "page": {"name": "secret", "originalName": "Secret"},
+                "content": "x",
+                "uuid": "b1",
+            }
+        ]
         client = FakeLogseqClient({"query_dsl": items, "get_all_pages": pages})
         result = await _run(client, _cfg_excl, "query")
         assert "Secret" not in result[0].text
@@ -46,7 +68,10 @@ class TestQuery:
         assert "0" in result[0].text or "no results" in result[0].text.lower()
 
     async def test_query_limit_respected(self):
-        items = [{"content": f"item {i}", "uuid": f"b{i}", "page": {"name": "p"}} for i in range(50)]
+        items = [
+            {"content": f"item {i}", "uuid": f"b{i}", "page": {"name": "p"}}
+            for i in range(50)
+        ]
         client = FakeLogseqClient({"query_dsl": items})
         result = await _run(client, _cfg, "query", limit=5)
         assert "item 0" in result[0].text
