@@ -1,23 +1,24 @@
 # Logseq API MCP Server
 
-**Model Context Protocol server for Logseq API integration with dynamic tool discovery**
+**Model Context Protocol server for Logseq API integration — 22 tools, dynamic discovery, DB-mode, privacy, and optional vector search**
 
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green)](https://modelcontextprotocol.io/)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![UV](https://img.shields.io/badge/package%20manager-uv-orange)](https://docs.astral.sh/uv/)
-[![Tests](https://github.com/gustavo-meilus/logseq-api-mcp/workflows/Test%20Suite/badge.svg)](https://github.com/gustavo-meilus/logseq-api-mcp/actions/workflows/test.yml)
-[![Quality](https://github.com/gustavo-meilus/logseq-api-mcp/workflows/Code%20Quality%20%26%20Security/badge.svg)](https://github.com/gustavo-meilus/logseq-api-mcp/actions/workflows/quality.yml)
-[![PR Validation](https://github.com/gustavo-meilus/logseq-api-mcp/workflows/Pull%20Request%20Validation/badge.svg)](https://github.com/gustavo-meilus/logseq-api-mcp/actions/workflows/pr-validation.yml)
+[![Tests](https://github.com/gustavo-meilus/logseq-api-mcp/workflows/Main%20CI%20Pipeline/badge.svg)](https://github.com/gustavo-meilus/logseq-api-mcp/actions/workflows/ci.yml)
+[![Quality](https://github.com/gustavo-meilus/logseq-api-mcp/workflows/Advanced%20Quality%20%26%20Security/badge.svg)](https://github.com/gustavo-meilus/logseq-api-mcp/actions/workflows/quality.yml)
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
 - [Installation](#installation)
 - [Configuration](#configuration)
+- [Environment Variables](#environment-variables)
 - [Available Tools](#available-tools)
-- [Tool Details & Examples](#tool-details--examples)
+- [DB-Mode](#db-mode)
+- [Privacy & Exclude Tags](#privacy--exclude-tags)
+- [Vector Search (Optional)](#vector-search-optional)
 - [Usage Examples](#usage-examples)
 - [Development](#development)
 - [Adding New Tools](#adding-new-tools)
@@ -28,433 +29,74 @@
 
 ## Overview
 
-The Logseq API MCP Server provides seamless integration between [Model Context Protocol](https://modelcontextprotocol.io/) clients and [Logseq](https://logseq.com/) knowledge bases. This server enables AI assistants and other MCP clients to interact with your Logseq notes, extract educational content, analyze knowledge relationships, and work with structured information through a comprehensive set of specialized tools.
+The Logseq API MCP Server provides AI assistants with seamless access to [Logseq](https://logseq.com/) knowledge bases via the [Model Context Protocol](https://modelcontextprotocol.io/). It ships 22 standard tools covering every read and write operation you need, plus an optional semantic vector search layer.
 
-**🚀 Key Innovation**: Features a **dynamic tool discovery system** that automatically detects, imports, and registers any new tools added to the `src/tools/` directory - **zero configuration required**!
+**Key features:**
 
-Perfect for:
-
-- 📚 **Educational Content Management** - Extract and organize flashcards and study materials
-- 🎓 **Learning Systems** - Build AI-powered study assistants and spaced repetition tools
-- 🔍 **Knowledge Base Analysis** - Discover relationships and patterns in your notes
-- 📊 **Content Discovery** - Navigate complex knowledge graphs with AI assistance
-- 🧠 **Academic Research** - Analyze course materials and learning resources
-
-## Features
-
-### 🛠️ Core Tools (9 Available)
-
-#### Read Operations
-
-1. **`get_all_pages`** - Complete page listing with metadata
-2. **`get_page_blocks`** - Hierarchical block structure analysis
-3. **`get_page_links`** - Page relationship and reference discovery
-4. **`get_block_content`** - Detailed block content with children
-5. **`get_all_page_content`** - Comprehensive page content extraction
-6. **`get_linked_flashcards`** - Advanced flashcard collection and analysis
-
-#### Write Operations
-
-7. **`append_block_in_page`** - Append blocks to pages with positioning options
-8. **`create_page`** - Create new pages with properties and format
-9. **`edit_block`** - Edit existing blocks with content, properties, and cursor control
-
-### 🔄 Dynamic Tool Discovery
-
-- **Auto-Discovery** - Automatically finds and imports tools from `src/tools/`
-- **Zero Configuration** - No manual imports or registrations needed
-- **Instant Integration** - New tools are immediately available
-- **CI Validation** - Automated testing ensures all tools work correctly
-
-### 🎯 Optimized for AI/LLM Consumption
-
-- **Clean Structured Output** - Emoji-enhanced, hierarchical formatting
-- **Educational Content Focus** - Specialized flashcard and learning material extraction
-- **Comprehensive Metadata** - Block IDs, UUIDs, timestamps, properties, and relationships
-- **Smart Content Organization** - Automatic categorization and summary generation
-- **Language Agnostic** - Works with any Logseq knowledge base language
+- **Dynamic tool discovery** — drop a `.py` file in `src/tools/` and it registers automatically
+- **DB-mode support** — works with both markdown-file graphs and the new Logseq database format
+- **Privacy enforcement** — `LOGSEQ_EXCLUDE_TAGS` hides sensitive pages from all read operations
+- **Optional vector search** — semantic block search via LanceDB (install the `[vector]` extra)
+- **Structured logging** — rotating log file, configurable level via `LOGSEQ_LOG_LEVEL`
+- **SSL control** — disable certificate verification for local/self-signed setups
 
 ## Installation
 
 ### Prerequisites
 
-- **Python 3.11+** - Modern Python with async/await support
-- **[uv](https://docs.astral.sh/uv/)** - Fast Python package manager and project management
-- **Running Logseq instance** with API enabled
-- **Logseq API token** for authentication
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) package manager
+- Logseq running with HTTP API enabled (see [Getting Your API Token](#getting-your-api-token))
 
 ### Quick Setup
 
-1. **Clone the repository**
+```bash
+git clone https://github.com/gustavo-meilus/logseq-api-mcp.git
+cd logseq-api-mcp
 
-   ```bash
-   git clone https://github.com/gustavo-meilus/logseq-api-mcp.git
-   cd logseq-api-mcp
-   ```
+# Install core dependencies
+uv sync
 
-2. **Install with uv**
+# Optional: install vector search extras
+uv sync --group vector
 
-   ```bash
-   uv sync
-   ```
+# Copy and edit environment template
+cp .env.template .env
+# Edit .env with your Logseq API details
+```
 
-3. **Configure environment**
+### Getting Your API Token
 
-   ```bash
-   cp .env.template .env
-   # Edit .env with your Logseq API details
-   ```
-
-4. **Start the server**
-   ```bash
-   uv run mcp run src/server.py
-   ```
+1. Open Logseq
+2. Go to **Settings → Features → Developer mode**
+3. Enable **HTTP APIs server**
+4. Copy the token shown
+5. Note the endpoint (default: `http://127.0.0.1:12315/api`)
 
 ## Configuration
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root (or set variables in your shell/MCP host config):
 
 ```env
-# Logseq API Configuration
+# Required
 LOGSEQ_API_ENDPOINT=http://127.0.0.1:12315/api
 LOGSEQ_API_TOKEN=your_api_token_here
+
+# Optional
+LOGSEQ_VERIFY_SSL=true
+LOGSEQ_DB_MODE=false
+LOGSEQ_EXCLUDE_TAGS=private,secret
+LOGSEQ_LOG_LEVEL=WARNING
+
+# Vector search (requires [vector] extra)
+LOGSEQ_VECTOR_ENABLED=false
+LOGSEQ_VECTOR_PATH=~/.cache/logseq-api-mcp/vector_db
+LOGSEQ_GRAPH_PATH=~/logseq
 ```
 
-### Getting Your Logseq API Token
+### Claude Desktop / MCP Client
 
-1. Open Logseq application
-2. Go to **Settings → Features → Developer mode**
-3. Enable **"HTTP APIs server"**
-4. Copy the displayed API token
-5. Note the API endpoint (default: `http://127.0.0.1:12315/api`)
-6. Activate the API
-
-## Available Tools
-
-| Tool                    | Description                             | Output                               | Best For                       |
-| ----------------------- | --------------------------------------- | ------------------------------------ | ------------------------------ |
-| `get_all_pages`         | Lists all pages with essential metadata | 568 pages (135 journal, 433 regular) | Navigation, page discovery     |
-| `get_page_blocks`       | Hierarchical block tree structure       | Multi-level tree with IDs, UUIDs     | Structure analysis, navigation |
-| `get_page_links`        | Pages linking to target page            | Reference analysis with metadata     | Relationship discovery         |
-| `get_block_content`     | Detailed block info with children       | Block content + immediate children   | Deep content analysis          |
-| `get_all_page_content`  | Complete page content + references      | Full content with linked sources     | Comprehensive content review   |
-| `get_linked_flashcards` | Flashcards from page + linked pages     | 20 flashcards across 2 pages         | Study material extraction      |
-| `append_block_in_page`  | Append blocks to pages with positioning | Success confirmation with details    | Content creation, organization |
-| `create_page`           | Create new pages with properties        | Page creation confirmation           | Page management, structure     |
-| `edit_block`            | Edit existing blocks with full control  | Edit confirmation with changes       | Content modification, updates  |
-
-## Tool Details & Examples
-
-### 🗂️ `get_all_pages`
-
-**Purpose:** Get a clean listing of all pages in your knowledge base
-
-**Output Format:**
-
-```
-📊 LOGSEQ PAGES LISTING
-📈 Total pages: 568
-📅 Journal pages: 135
-📄 Regular pages: 433
-
-📄 REGULAR PAGES:
-📄 Domain Driven Design (DDD) I | ID: 3460 | UUID: 682cfd19-7df6-46e0-a6f3-c09eca3b2530
-📄 MBA Engenharia de Software | ID: 170 | UUID: 682fa28c-a3cc-47f2-ae65-7b7db57e1d67
-```
-
-**Use Cases:**
-
-- Knowledge base exploration
-- Page inventory and organization
-- Finding specific pages by name or metadata
-
----
-
-### 🌳 `get_page_blocks`
-
-**Purpose:** Get hierarchical block structure of any page
-
-**Example Input:** `"Domain Driven Design (DDD) I"`
-
-**Output Features:**
-
-- Tree structure with indentation levels
-- Block IDs, UUIDs, and parent-child relationships
-- Property extraction and metadata
-- Multi-level hierarchy support (up to 8+ levels)
-
-**Sample Output:**
-
-```
-🌳 PAGE BLOCKS TREE STRUCTURE
-📄 Page: Domain Driven Design (DDD) I (ID: 3460)
-📊 Total blocks: 1
-
-📋 tipo:: #aula curso:: [[MBA Engenharia de Software]]
-   📊 ID:3544 | UUID:682cfd19-2826-46b7-8222-0821b11abc60 | Level:1
-   👇 Children: 7
-
-  H1 # Flashcards [heading: 1]
-     📊 ID:3552 | UUID:682cfd19-4c9c-40dd-8cb1-c2625315b8ae | Level:2
-     👇 Children: 10
-```
-
----
-
-### 🔗 `get_page_links`
-
-**Purpose:** Find all pages that link to a target page
-
-**Example Result for "Domain Driven Design (DDD) I":**
-
-```
-🔗 PAGE LINKS ANALYSIS
-📄 Target Page: Domain Driven Design (DDD) I
-📊 Found 1 pages linking to this page
-
-📄 1. Domain Driven Design (DDD) II
-   🔑 ID: 3588 | UUID: 682cfd19-3a24-4636-a5d5-c62ea57d352e
-   📊 References: 1 | Journal: No
-   ⚙️ Properties: relacionado: Domain Driven Design (DDD) I
-```
-
-**Applications:**
-
-- Discover related content and cross-references
-- Build knowledge maps and relationship graphs
-- Find course sequences and learning paths
-
----
-
-### 🔍 `get_block_content`
-
-**Purpose:** Get detailed information about a specific block and its immediate children
-
-**Example Input:** UUID `682cfd19-3c3f-427c-a0be-c5a3a197ea20`
-
-**Output:**
-
-```
-🔍 MAIN BLOCK
-📌 Block ID: 3465
-🔑 UUID: 682cfd19-3c3f-427c-a0be-c5a3a197ea20
-
-📝 CONTENT:
-💡 Flashcard
-Por que o DDD prioriza a colaboração entre desenvolvedores e especialistas do domínio? #card
-+ [ ] Porque os especialistas do domínio são responsáveis apenas por aprovar a infraestrutura tecnológica.
-+ [ ] Para garantir que o software seja construído com base no conhecimento profundo do domínio, reduzindo ambiguidades e erros.
-
-👶 IMMEDIATE CHILDREN:
-🔸 CHILD 1:
-Resposta Correta: Para garantir que o software seja construído com base no conhecimento profundo do domínio, reduzindo ambiguidades e erros.
-```
-
----
-
-### 📖 `get_all_page_content`
-
-**Purpose:** Extract comprehensive content from a page including properties, blocks, and linked references
-
-**Key Features:**
-
-- Complete hierarchical content structure
-- Property extraction and formatting
-- Flashcard identification and extraction
-- Linked references analysis
-- Educational content optimization
-
-**Example Summary:**
-
-```
-📖 Domain Driven Design (DDD) I
-📊 1 blocks | 1 linked sources
-
-📄 COMPREHENSIVE CONTENT:
-📄 Page Properties [3544]
-   📋 curso: MBA Engenharia de Software | tipo: aula | professor: Guilherme Bezerra de Lima
-
-🎯 # Flashcards [3552]
-   💡 Flashcard [3465]
-      ❓ Q: Por que o DDD prioriza a colaboração entre desenvolvedores e especialistas do domínio?
-```
-
----
-
-### ✏️ `append_block_in_page`
-
-**Purpose:** Append new blocks to any page with precise positioning control
-
-**Key Features:**
-
-- **Positioning Options** - Insert before specific blocks, as siblings, or at page end
-- **Page-level Blocks** - Support for page-level block creation
-- **Content Flexibility** - Support for any text content including markdown
-- **Immediate Feedback** - Detailed confirmation with positioning information
-
-**Example Usage:**
-
-```python
-# Basic block append
-await append_block_in_page("My Page", "New content here")
-
-# Positioned before specific block
-await append_block_in_page("My Page", "Important note", before="block-uuid-123")
-
-# As sibling of another block
-await append_block_in_page("My Page", "Related content", sibling="block-uuid-456")
-
-# Page-level block
-await append_block_in_page("My Page", "Page property", is_page_block=True)
-```
-
-**Output Example:**
-
-```
-✅ **BLOCK APPENDED SUCCESSFULLY**
-📄 Page: My Page
-📝 Content: New content here
-📍 Positioned: At the end of the page
-🔗 **NEXT STEPS:**
-• Check your Logseq graph to see the new block
-• Use get_page_blocks to verify the block was added
-• Use get_block_content to get details of the new block
-```
-
----
-
-### 📄 `create_page`
-
-**Purpose:** Create new pages with custom properties and formatting
-
-**Key Features:**
-
-- **Property Support** - Add custom properties and metadata
-- **Format Options** - Support for markdown and org formats
-- **Journal Detection** - Automatic journal page recognition
-- **Comprehensive Metadata** - Full page entity information
-
-**Example Usage:**
-
-```python
-# Basic page creation
-await create_page("New Page")
-
-# With properties
-properties = {"status": "active", "priority": "high"}
-await create_page("Project Page", properties=properties)
-
-# With format specification
-await create_page("Org Page", format="org")
-
-# Complete page with all options
-await create_page("Complete Page", properties=properties, format="markdown")
-```
-
-**Output Example:**
-
-```
-✅ **PAGE CREATED SUCCESSFULLY**
-📄 Page: New Page
-⚙️ Properties set: 2 items
-📝 Format: markdown
-🔗 **NEXT STEPS:**
-• Check your Logseq graph to see the new page
-• Use get_all_pages to verify the page was created
-• Use get_page_blocks to start adding content
-```
-
----
-
-### ✏️ `edit_block`
-
-**Purpose:** Edit existing blocks with full control over content, properties, and behavior
-
-**Key Features:**
-
-- **Content Editing** - Modify block content with preview
-- **Property Management** - Add, update, or remove block properties
-- **Cursor Control** - Position cursor at specific locations
-- **Focus Management** - Control block focus after editing
-
-**Example Usage:**
-
-```python
-# Edit content only
-await edit_block("block-uuid-123", content="Updated content")
-
-# Update properties
-properties = {"status": "completed", "priority": "high"}
-await edit_block("block-uuid-123", properties=properties)
-
-# Set cursor position and focus
-await edit_block("block-uuid-123", cursor_position=10, focus=True)
-
-# Complete edit with all options
-await edit_block("block-uuid-123",
-                content="New content",
-                properties=properties,
-                cursor_position=5,
-                focus=True)
-```
-
-**Output Example:**
-
-```
-✅ **BLOCK EDITED SUCCESSFULLY**
-🔑 Block UUID: block-uuid-123
-📝 **UPDATED CONTENT:**
-```
-
-New content
-
-```
-⚙️ **UPDATED PROPERTIES:**
-• status: completed
-• priority: high
-📍 Cursor positioned at index 5
-🎯 Focus: Enabled
-🔗 **NEXT STEPS:**
-• Check your Logseq graph to see the updated block
-• Use get_block_content to verify the changes
-• Continue editing or add more content
-```
-
----
-
-### 🧠 `get_linked_flashcards`
-
-**Purpose:** Comprehensive flashcard extraction from target page and all linked pages
-
-**Real Example Results for "Domain Driven Design (DDD) I":**
-
-```
-🎯 LINKED FLASHCARDS ANALYSIS
-📄 Target Page: Domain Driven Design (DDD) I
-🔗 Searched 2 pages (target + 1 linked)
-💡 Found 20 flashcards total
-
-📚 Domain Driven Design (DDD) I (10 flashcards)
-📚 Domain Driven Design (DDD) II (10 flashcards)
-
-📊 SUMMARY:
-• Total flashcards: 20
-• Total answer blocks: 0
-• Pages with flashcards: 2
-• Average answers per flashcard: 0.0
-```
-
-**Advanced Features:**
-
-- Multi-choice question support
-- Answer block extraction and linking
-- Cross-page flashcard discovery
-- Educational metadata preservation
-- Learning system integration ready
-
-## Usage Examples
-
-Add to your Claude Desktop MCP settings (`~/.claude/claude_desktop_config.json`):
+Add to `~/.claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -463,10 +105,8 @@ Add to your Claude Desktop MCP settings (`~/.claude/claude_desktop_config.json`)
       "command": "uv",
       "args": [
         "run",
-        "--directory",
-        "/path/to/logseq-api-mcp",
-        "python",
-        "src/server.py"
+        "--directory", "/path/to/logseq-api-mcp",
+        "python", "src/server.py"
       ],
       "env": {
         "LOGSEQ_API_ENDPOINT": "http://127.0.0.1:12315/api",
@@ -477,7 +117,167 @@ Add to your Claude Desktop MCP settings (`~/.claude/claude_desktop_config.json`)
 }
 ```
 
-**Note:** Replace `/path/to/logseq-api-mcp` with the actual path to your cloned repository.
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `LOGSEQ_API_ENDPOINT` | `http://127.0.0.1:12315/api` | Logseq HTTP API base URL |
+| `LOGSEQ_API_TOKEN` | *(required)* | Bearer token for Logseq API auth |
+| `LOGSEQ_VERIFY_SSL` | `true` | Set `false` or `0` to skip TLS verification |
+| `LOGSEQ_DB_MODE` | `false` | Set `true` to enable Logseq database-format support |
+| `LOGSEQ_EXCLUDE_TAGS` | *(empty)* | Comma-separated tags; pages tagged with any are hidden from all reads |
+| `LOGSEQ_LOG_LEVEL` | `WARNING` | Python log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `LOGSEQ_VECTOR_ENABLED` | `false` | Set `true` to enable vector search tools |
+| `LOGSEQ_VECTOR_PATH` | `~/.cache/logseq-api-mcp/vector_db` | LanceDB storage path |
+| `LOGSEQ_GRAPH_PATH` | `~/logseq` | Root of the Logseq markdown graph (for vector sync) |
+
+## Available Tools
+
+### Read Operations (12 tools)
+
+| Tool | Description |
+|---|---|
+| `get_all_pages` | List every page with metadata (ID, UUID, journal flag, namespace) |
+| `get_page_blocks` | Hierarchical block tree with IDs, UUIDs, and children counts |
+| `get_page_links` | Pages linking to a target page (alias for `get_page_backlinks`) |
+| `get_page_backlinks` | Full backlink analysis including block-level references |
+| `get_block_content` | Block detail with properties and immediate children |
+| `get_all_page_content` | Complete page: properties, blocks, DB-property resolution, ref expansion |
+| `get_linked_flashcards` | Extracts flashcard Q&A pairs from a page and all its linked pages |
+| `search` | Full-text search across blocks, pages, and files |
+| `query` | Execute raw Datalog/DSL queries against the graph |
+| `find_pages_by_property` | Filter pages by property key and optional value |
+| `get_pages_from_namespace` | List all pages under a Logseq namespace |
+| `get_pages_tree_from_namespace` | Nested tree of namespace pages |
+
+### Write Operations (10 tools)
+
+| Tool | Description |
+|---|---|
+| `create_page` | Create a page with optional properties and format |
+| `delete_page` | Permanently remove a page |
+| `rename_page` | Rename a page (updates all references) |
+| `update_page` | Append or replace content on an existing page |
+| `append_block_in_page` | Add blocks at the end of a page |
+| `edit_block` | Replace a block's content |
+| `update_block` | Update block content by UUID |
+| `insert_nested_block` | Insert a child or sibling block relative to an existing block |
+| `delete_block` | Delete a block by UUID |
+| `set_block_properties` | Set properties on a block (DB-mode only) |
+
+### Optional Vector Tools (requires `[vector]` extra + `LOGSEQ_VECTOR_ENABLED=true`)
+
+| Tool | Description |
+|---|---|
+| `vector_search` | Semantic similarity search across all synced blocks |
+| `vector_db_status` | Report vector DB status, doc count, and sync state |
+
+## DB-Mode
+
+Logseq's newer **database format** stores graph data in SQLite rather than markdown files. Enable DB-mode to unlock:
+
+- `set_block_properties` — upsert structured properties on any block
+- `get_all_page_content` with `resolve_refs=true` — resolves `[[uuid]]` references to page names
+- `find_pages_by_property` — property-filtered Datalog queries
+
+```env
+LOGSEQ_DB_MODE=true
+```
+
+When DB-mode is off, `set_block_properties` returns an informative error message and the rest of the tools work as usual.
+
+## Privacy & Exclude Tags
+
+Any page tagged with a tag listed in `LOGSEQ_EXCLUDE_TAGS` is invisible to all read operations:
+
+```env
+LOGSEQ_EXCLUDE_TAGS=private,confidential,draft
+```
+
+Enforcement layers:
+
+| Operation | Behavior |
+|---|---|
+| `get_all_pages` | Excluded pages absent from the listing |
+| `search` | Excluded pages and their blocks filtered out |
+| `query` | Results post-filtered against excluded page names |
+| `find_pages_by_property` | Results post-filtered |
+| `get_page_backlinks` | Source pages that are excluded are removed from results |
+| `get_all_page_content` | Returns `❌ Access denied` when the requested page is excluded |
+
+Exclusion is computed at query time — toggling `LOGSEQ_EXCLUDE_TAGS` takes effect on the next call.
+
+## Vector Search (Optional)
+
+Semantic search over your Logseq graph using [LanceDB](https://lancedb.github.io/lancedb/).
+
+### Setup
+
+```bash
+# Install vector extras
+uv sync --group vector
+
+# Enable in env
+export LOGSEQ_VECTOR_ENABLED=true
+export LOGSEQ_GRAPH_PATH=/path/to/your/logseq/graph
+
+# Build the index (one-shot)
+uv run logseq-sync --once
+
+# Or run as a daemon that watches for file changes
+uv run logseq-sync
+```
+
+### CLI Reference
+
+```
+logseq-sync [--once]
+
+  --once    Sync the graph once and exit (default: watch daemon)
+```
+
+### Using the MCP Tools
+
+Once the index is built, the `vector_search` and `vector_db_status` tools are automatically registered when `LOGSEQ_VECTOR_ENABLED=true` and the `lancedb` package is installed.
+
+```
+vector_search(query="what is domain-driven design", limit=10)
+vector_db_status()
+```
+
+## Usage Examples
+
+### Find all pages in a namespace
+
+```
+get_pages_from_namespace("Projects")
+```
+
+### Search for a topic and get full content
+
+```
+search("spaced repetition")
+get_all_page_content("Learning Systems")
+```
+
+### Create a page and add blocks
+
+```
+create_page("Meeting 2025-05-19", properties={"type": "meeting"})
+update_page("Meeting 2025-05-19", content="- Agenda item 1\n- Agenda item 2")
+```
+
+### Extract flashcards for study
+
+```
+get_linked_flashcards("Domain Driven Design")
+```
+
+### Query the graph with Datalog
+
+```
+query('[:find ?name :where [?p :block/name ?name] [?p :block/properties ?props] [(get ?props :type) ?t] [(= ?t "book")]]')
+```
 
 ## Development
 
@@ -485,306 +285,165 @@ Add to your Claude Desktop MCP settings (`~/.claude/claude_desktop_config.json`)
 
 ```
 logseq-api-mcp/
-├── .github/
-│   ├── workflows/             # GitHub Actions CI/CD
-│   │   ├── test.yml           # Main test suite
-│   │   ├── pr-validation.yml  # PR validation
-│   │   ├── comprehensive-test.yml # Extended testing
-│   │   └── quality.yml        # Code quality & security
-│   ├── ISSUE_TEMPLATE/        # Issue templates
-│   └── pull_request_template.md # PR template
+├── .github/workflows/
+│   ├── ci.yml             # Main test + lint pipeline
+│   ├── quality.yml        # Mypy, Bandit, safety
+│   ├── release.yml        # Cross-platform release tests
+│   └── pr-validation.yml  # PR tool-count gate
 ├── src/
-│   ├── server.py              # MCP server implementation
-│   ├── registry.py            # Dynamic tool discovery & registration
-│   └── tools/                 # Tool implementations (auto-discovered)
-│       ├── __init__.py        # Dynamic tool importer
-│       ├── get_all_pages.py   # Page listing tool
-│       ├── get_page_blocks.py # Block structure tool
-│       ├── get_page_links.py  # Page links tool
-│       ├── get_block_content.py # Block detail tool
-│       ├── get_all_page_content.py # Complete content tool
-│       ├── get_linked_flashcards.py # Flashcard extraction tool
-│       ├── append_block_in_page.py # Block creation tool
-│       ├── create_page.py     # Page creation tool
-│       └── edit_block.py      # Block editing tool
-├── tests/
-│   ├── conftest.py            # Shared test fixtures
-│   ├── test_append_block_in_page.py # Block creation tests
-│   ├── test_create_page.py    # Page creation tests
-│   ├── test_edit_block.py     # Block editing tests
-│   ├── test_get_tools.py      # Read operation tests
-│   ├── test_mcp_server.py     # Server validation tests
-│   ├── test_runner.py         # Test runner utility
-│   └── TEST_SUMMARY.md        # Test documentation
-├── pyproject.toml             # UV project configuration
-├── .env.template              # Environment template
-└── README.md                  # This file
+│   ├── server.py          # FastMCP server entry point
+│   ├── registry.py        # Dynamic tool registration (+ vector conditional)
+│   ├── logging_setup.py   # Rotating-file logger
+│   ├── client/
+│   │   ├── logseq_client.py   # Async HTTP client for Logseq API
+│   │   ├── config.py          # LogseqConfig dataclass + load_config()
+│   │   └── exceptions.py      # LogseqAPIError hierarchy
+│   ├── parser/
+│   │   └── markdown.py        # Markdown → block tree parser
+│   ├── privacy/
+│   │   └── exclude_tags.py    # Page exclusion by tag
+│   ├── tools/
+│   │   ├── __init__.py        # Auto-discovery scanner
+│   │   ├── formatters/        # Pure formatting helpers
+│   │   └── *.py               # 22 tool modules
+│   └── vector/
+│       ├── __init__.py        # VECTOR_AVAILABLE guard
+│       ├── config.py          # VectorConfig + load_vector_config()
+│       ├── sync.py            # sync_graph(), watch_graph(), cli_entry()
+│       ├── search.py          # vector_search() MCP tool
+│       └── status.py          # vector_db_status() MCP tool
+└── tests/
+    ├── conftest.py            # FakeLogseqClient test double
+    ├── client/                # LogseqClient unit tests
+    ├── parser/                # Markdown parser tests
+    ├── privacy/               # Exclude-tags enforcement tests
+    ├── tools/                 # Per-tool and formatter tests
+    └── vector/                # Vector module tests
 ```
 
-### Development Setup
+### Development Commands
 
 ```bash
-# Install with development dependencies
+# Install all deps
 uv sync --dev
 
-# Format code (auto-fixes issues)
+# Run tests with coverage
+uv run --group test pytest tests/ --cov=src --cov-report=term-missing
+
+# Format and lint
 uv run ruff check --fix && uv run ruff format
 
-# Test server with MCP inspector
-uv run mcp dev src/server.py
+# Type check
+uv run mypy src/ --ignore-missing-imports
 
-# Run server directly
-uv run mcp run src/server.py
+# Security scan
+uv run bandit -r src/
+
+# Dev server with MCP inspector
+uv run mcp dev src/server.py
 ```
 
 ## Adding New Tools
 
-Thanks to the **dynamic discovery system**, adding new tools is incredibly simple:
+The dynamic discovery system makes adding tools simple:
 
-### 1. Create Your Tool File
-
-Create `src/tools/your_new_tool.py`:
+### 1. Create the tool file
 
 ```python
-def your_new_tool(param: str) -> dict:
-    """
-    Your tool description here.
+# src/tools/my_tool.py
+from typing import List
+from mcp.types import TextContent
+from src.client.logseq_client import LogseqClient
+from src.client.config import LogseqConfig, load_config
+from src.logging_setup import get_logger
+
+_log = get_logger(__name__)
+
+async def _run(client: LogseqClient, config: LogseqConfig, param: str) -> List[TextContent]:
+    try:
+        _log.debug("%s called", __name__)
+        result = await client.some_api_call(param)
+        return [TextContent(type="text", text=f"Result: {result}")]
+    except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
+        return [TextContent(type="text", text=f"❌ Error: {exc}")]
+
+async def my_tool(param: str) -> List[TextContent]:
+    """One-line description used as the MCP tool description.
 
     Args:
-        param: Description of parameter
+        param: Description of the parameter.
 
     Returns:
-        Dict with tool results
+        List with one TextContent.
     """
-    return {
-        "result": f"Processed: {param}",
-        "status": "success"
-    }
+    cfg = load_config()
+    return await _run(LogseqClient(cfg), cfg, param)
 ```
 
-### 2. That's It! 🎉
+### 2. Write a test
 
-The system automatically:
+```python
+# tests/tools/test_my_tool.py
+from src.client.config import LogseqConfig
+from tests.conftest import FakeLogseqClient
+from src.tools.my_tool import _run
 
-- ✅ **Discovers** your tool file
-- ✅ **Imports** the function
-- ✅ **Registers** it with the MCP server
-- ✅ **Validates** it in CI tests
+_cfg = LogseqConfig("http://x", "t")
 
-### Tool Requirements
-
-- **File location**: Must be in `src/tools/` directory
-- **Function visibility**: Don't start function names with `_`
-- **File naming**: Don't start filenames with `_`
-- **Documentation**: Include docstring with description
-- **Type hints**: Use for better IDE support
-
-### Dynamic Discovery Process
-
-```
-New Tool File → Auto-Scan → Import → Registration → Validation
+async def test_my_tool_returns_result():
+    client = FakeLogseqClient({"some_api_call": "hello"})
+    result = await _run(client, _cfg, "param")
+    assert "hello" in result[0].text
 ```
 
-1. **Auto-Scan**: `src/tools/__init__.py` scans directory for `.py` files
-2. **Import**: Dynamically imports all public functions
-3. **Registration**: `src/registry.py` auto-registers with MCP server
-4. **Validation**: Tests automatically verify tool presence
+### 3. That's it
+
+The tool is automatically discovered, imported, and registered. No configuration changes needed.
+
+**Rules:**
+- File must be in `src/tools/`
+- Function name must not start with `_`
+- Use the `_run(client, config, ...)` pattern for testability
+- Public function creates `LogseqClient(cfg)` and calls `_run`
 
 ## Testing
 
-### Automated Testing
-
-The project includes comprehensive automated testing with **68 test cases** covering all functionality:
-
 ```bash
-# Run the full test suite
-uv run pytest tests/ --cov=src/tools --cov-report=html
+# Run full suite
+uv run --group test pytest tests/ -v
 
-# Run specific tool tests
-uv run python tests/test_runner.py --tool append_block_in_page
-uv run python tests/test_runner.py --tool create_page
-uv run python tests/test_runner.py --tool edit_block
+# With coverage
+uv run --group test pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=85
 
-# Run server validation
-uv run python tests/test_mcp_server.py
+# Run a specific test file
+uv run --group test pytest tests/tools/test_search.py -v
 ```
 
-**Test Coverage:**
+**Current coverage: 87%** across 345 tests.
 
-- ✅ **68 Test Cases** - Comprehensive coverage of all 9 tools
-- ✅ **Server Health** - Ensures MCP server starts correctly
-- ✅ **Tool Discovery** - Validates automatic tool detection
-- ✅ **Dynamic Registration** - Confirms all tools are registered
-- ✅ **Write Operations** - Tests for append, create, and edit tools
-- ✅ **Read Operations** - Tests for all get\_\* tools
-- ✅ **Error Handling** - HTTP errors, network issues, edge cases
-- ✅ **CI Integration** - Runs automatically on all commits
-- ✅ **Coverage Reporting** - 80% minimum coverage requirement
-
-### Manual Testing
-
-```bash
-# Test with MCP Inspector (interactive)
-uv run mcp dev src/server.py
-
-# Direct server testing
-uv run mcp run src/server.py
-```
-
-### Test Output Example
-
-```
-🔍 Testing MCP Server Health and Tools...
-🔧 Discovered tools (auto-discovery): ['append_block_in_page', 'create_page', 'edit_block', 'get_all_page_content', 'get_all_pages', 'get_block_content', 'get_linked_flashcards', 'get_page_blocks', 'get_page_links']
-
-🏥 Testing server health...
-✅ Server started and responded successfully
-✅ Dynamic tool discovery working correctly
-
-🎉 MCP Server test completed successfully!
-   📊 Tools auto-discovered: 9
-   🏥 Server health: OK
-   🔄 Dynamic discovery: OK
-```
+The test double `FakeLogseqClient` (defined in `tests/conftest.py`) accepts a dict of `method_name → return_value` and records all calls in `self.calls`. Every tool test uses this pattern — no `aiohttp` patching.
 
 ## CI/CD Pipeline
 
-The project includes a comprehensive CI/CD pipeline with automated testing, code quality checks, and security scanning.
-
-### 🚀 **Automated Workflows**
-
-#### **Pull Request Validation**
-
-- ✅ **Test Coverage** - 80% minimum coverage requirement
-- ✅ **Code Quality** - Ruff linting and MyPy type checking
-- ✅ **Security Scanning** - Bandit security analysis
-- ✅ **Tool Discovery** - Automated tool validation
-- ✅ **MCP Server Testing** - Server startup and functionality tests
-
-#### **Main Test Suite**
-
-- ✅ **Multi-Python Testing** - Python 3.11, 3.12, and 3.13
-- ✅ **Cross-Platform** - Ubuntu, Windows, and macOS
-- ✅ **Performance Testing** - Memory usage and test duration
-- ✅ **Integration Testing** - Real MCP server with tools
-
-#### **Code Quality & Security**
-
-- ✅ **Daily Security Scans** - Automated vulnerability detection
-- ✅ **Dependency Checking** - Safety and license validation
-- ✅ **Code Standards** - Automated formatting and linting
-- ✅ **Secret Detection** - Hardcoded credential scanning
-
-### 📊 **Quality Gates**
-
-All workflows must pass for:
-
-- ✅ Code to be merged to main
-- ✅ Releases to be published
-- ✅ PRs to be approved
-
-### 🔧 **Local Testing**
-
-Run the same checks locally:
-
-```bash
-# Install dependencies
-uv sync --dev
-
-# Run tests with coverage
-uv run pytest tests/ --cov=src/tools --cov-report=html
-
-# Run linting
-uv run ruff check src/ tests/
-uv run ruff format --check src/ tests/
-
-# Run type checking
-uv run mypy src/ --ignore-missing-imports
-
-# Run security scan
-uv run bandit -r src/
-
-# Run dependency check
-uv run safety check
-```
-
-### 📈 **Coverage Requirements**
-
-- **Minimum Coverage:** 80% for PR validation
-- **Target Coverage:** 85% for comprehensive testing
-- **Coverage Tools:** pytest-cov with HTML and XML reports
-
-### 🛡️ **Security Features**
-
-- **Bandit** - Python security linter
-- **Safety** - Dependency vulnerability scanner
-- **Secret Detection** - Hardcoded credential detection
-- **License Check** - Dependency license validation
+| Workflow | Triggers | Checks |
+|---|---|---|
+| `ci.yml` | push/PR to main | pytest ≥85% coverage, ruff lint+format, tool count gate |
+| `quality.yml` | PR to main | mypy, bandit, safety, license check |
+| `release.yml` | release event / weekly | cross-platform (ubuntu/windows/macos × py3.11/3.12/3.13) |
+| `pr-validation.yml` | PR to main | verifies ≥21 standard tools are registered |
 
 ## Contributing
 
-We follow **GitHub Flow** for all contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for complete details.
-
-### Quick Start
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/add-search-tool
-   ```
-3. **Create your tool** (just add the file - automatic integration!)
-   ```bash
-   # Create src/tools/search_tool.py with your function
-   ```
-4. **Format and test**
-   ```bash
-   uv run ruff check --fix && uv run ruff format
-   uv run python tests/test_mcp_server.py
-   ```
-5. **Commit and push**
-   ```bash
-   git commit -m "feat: add search tool for content discovery"
-   git push origin feature/add-search-tool
-   ```
-6. **Open a Pull Request**
-
-### Development Benefits
-
-- **Zero Configuration** - No manual imports or registrations
-- **Instant Feedback** - Tools work immediately after creation
-- **Automated Validation** - CI tests verify everything works
-- **Clean Architecture** - Dynamic system keeps code organized
-- **Comprehensive Testing** - 68 test cases with 80% coverage
-- **Quality Assurance** - Automated linting, type checking, and security
-- **CI/CD Pipeline** - Automated testing on every PR and push
-
-### Code Quality Standards
-
-- **Python 3.11+** with modern async/await patterns
-- **PEP 8** compliance via Ruff formatting
-- **Type hints** for better IDE support
-- **Error handling** with comprehensive exception management
-- **Environment variables** for configuration
-- **Modular design** with dynamic tool loading
-
-## Documentation & Resources
-
-- [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
-- [Logseq API Documentation](https://logseq.github.io/plugins/)
-- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-- [UV Package Manager](https://docs.astral.sh/uv/)
-- [Testing Documentation](tests/README.md)
+1. Fork and create a feature branch
+2. Add a tool file to `src/tools/` following the pattern above
+3. Add tests to `tests/tools/`
+4. Run `uv run ruff check --fix && uv run ruff format && uv run --group test pytest tests/ -v`
+5. Open a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Model Context Protocol](https://modelcontextprotocol.io/) for the excellent protocol specification
-- [Logseq](https://logseq.com/) for the powerful knowledge management platform
-- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) for the robust development framework
-- [UV](https://docs.astral.sh/uv/) for modern Python package management
+MIT — see [LICENSE](LICENSE).
 
 ---
 
