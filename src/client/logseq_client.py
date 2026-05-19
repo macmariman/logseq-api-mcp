@@ -1,9 +1,41 @@
 """Async HTTP client for the Logseq local API."""
 
+import asyncio
+
 import aiohttp
 
 from .config import LogseqConfig
-from .exceptions import LogseqAPIError, LogseqAuthError, LogseqConnectionError
+from .exceptions import (
+    LogseqAPIError,
+    LogseqAuthError,
+    LogseqConnectionError,
+    LogseqNotFoundError,
+)
+
+
+async def _interpret(response: aiohttp.ClientResponse, method: str) -> object:
+    """Translate an aiohttp response into a value or a typed exception.
+
+    @param response aiohttp response object (already awaited as context manager).
+    @param method   The logseq method called, used for error messages.
+    @returns        Parsed JSON body when status == 200.
+    @throws LogseqAuthError, LogseqNotFoundError, LogseqAPIError.
+    @complexity O(1).
+    """
+    status = response.status
+    if status == 200:
+        try:
+            return await response.json()
+        except Exception:
+            return await response.text()
+    if status == 401:
+        raise LogseqAuthError(f"Auth failed calling {method}", status_code=401)
+    if status == 404:
+        raise LogseqNotFoundError(f"Unknown method {method}", status_code=404)
+    body = await response.text()
+    raise LogseqAPIError(
+        f"HTTP {status} from {method}: {body[:200]}", status_code=status
+    )
 
 
 class LogseqClient:
@@ -24,27 +56,23 @@ class LogseqClient:
     # ── Internal ─────────────────────────────────────────────────────────────
 
     async def _call(self, method: str, args: list | None = None) -> object:
-        """Execute a single Logseq API JSON-RPC call.
+        """Issue a JSON-RPC POST to /api and map HTTP status to typed exceptions.
 
-        Args:
-            method: Logseq API method name (e.g. 'logseq.Editor.getAllPages').
-            args: Positional arguments list for the method.
-
-        Returns:
-            Parsed JSON result from the API.
-
-        Raises:
-            LogseqAuthError: On HTTP 401 or 403.
-            LogseqAPIError: On any other non-200 HTTP status.
-            LogseqConnectionError: On network-level failures.
-
-        Complexity: O(1).
+        @param method  Logseq method name, e.g. "logseq.Editor.getAllPages".
+        @param args    Positional args list forwarded as JSON; defaults to [].
+        @returns       Parsed JSON response body.
+        @throws LogseqAuthError       on HTTP 401.
+        @throws LogseqNotFoundError   on HTTP 404.
+        @throws LogseqAPIError        on any other 4xx/5xx with status_code set.
+        @throws LogseqConnectionError on aiohttp connector errors and asyncio timeouts.
+        @complexity O(1) network call.
         """
         payload = {"method": method, "args": args or []}
         headers = {
             "Authorization": f"Bearer {self._config.token}",
             "Content-Type": "application/json",
         }
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -52,25 +80,11 @@ class LogseqClient:
                     json=payload,
                     headers=headers,
                     ssl=self._config.verify_ssl,
-                ) as resp:
-                    if resp.status in (401, 403):
-                        raise LogseqAuthError(
-                            f"Authentication failed for {method}",
-                            status_code=resp.status,
-                        )
-                    if resp.status != 200:
-                        raise LogseqAPIError(
-                            f"Logseq API error {resp.status} for {method}",
-                            status_code=resp.status,
-                        )
-                    return await resp.json(content_type=None)
-        except (LogseqAPIError, LogseqAuthError):
-            raise
-        except aiohttp.ClientConnectionError as exc:
-            raise LogseqConnectionError(f"Cannot connect to Logseq: {exc}") from exc
-        except Exception as exc:
+                ) as response:
+                    return await _interpret(response, method)
+        except (aiohttp.ClientConnectorError, asyncio.TimeoutError) as exc:
             raise LogseqConnectionError(
-                f"Unexpected error calling {method}: {exc}"
+                f"Cannot reach Logseq API at {self._config.endpoint}: {exc}"
             ) from exc
 
     # ── Page read operations ──────────────────────────────────────────────────

@@ -1,10 +1,18 @@
 """Tests for LogseqClient — all HTTP via patched _call, no real network."""
 
+import asyncio
+
+import aiohttp
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.client.config import LogseqConfig
-from src.client.exceptions import LogseqAPIError, LogseqAuthError
+from src.client.exceptions import (
+    LogseqAPIError,
+    LogseqAuthError,
+    LogseqConnectionError,
+    LogseqNotFoundError,
+)
 from src.client.logseq_client import LogseqClient
 
 
@@ -221,6 +229,7 @@ async def test_call_raises_api_error_on_500(config):
     mock_response = MagicMock()
     mock_response.status = 500
     mock_response.json = AsyncMock(return_value={})
+    mock_response.text = AsyncMock(return_value="server error")
 
     with patch("aiohttp.ClientSession") as mock_sess_cls:
         mock_sess = _make_session_mock(mock_response)
@@ -230,3 +239,70 @@ async def test_call_raises_api_error_on_500(config):
         with pytest.raises(LogseqAPIError) as exc_info:
             await client._call("logseq.Editor.getAllPages")
         assert exc_info.value.status_code == 500
+
+
+# ── B2: _call HTTP error mapping (typed exceptions) ──────────────────────────
+
+
+def _client():
+    return LogseqClient(LogseqConfig(endpoint="http://x/api", token="t"))
+
+
+def _mock_post(status: int, payload=None):
+    """Return a patch context that makes the next POST return `status`."""
+    resp = MagicMock()
+    resp.status = status
+    resp.json = AsyncMock(return_value=payload or {})
+    resp.text = AsyncMock(return_value=str(payload or ""))
+    sess = MagicMock()
+    sess.post.return_value.__aenter__ = AsyncMock(return_value=resp)
+    sess.post.return_value.__aexit__ = AsyncMock(return_value=None)
+    ctx = patch("aiohttp.ClientSession")
+    return ctx, sess, resp
+
+
+async def test_call_raises_auth_on_401():
+    ctx, sess, _ = _mock_post(401)
+    with ctx as mock_sess_class:
+        mock_sess_class.return_value.__aenter__ = AsyncMock(return_value=sess)
+        mock_sess_class.return_value.__aexit__ = AsyncMock(return_value=None)
+        with pytest.raises(LogseqAuthError):
+            await _client()._call("logseq.Editor.getAllPages")
+
+
+async def test_call_raises_not_found_on_404():
+    ctx, sess, _ = _mock_post(404)
+    with ctx as mock_sess_class:
+        mock_sess_class.return_value.__aenter__ = AsyncMock(return_value=sess)
+        mock_sess_class.return_value.__aexit__ = AsyncMock(return_value=None)
+        with pytest.raises(LogseqNotFoundError):
+            await _client()._call("logseq.Editor.bogusMethod")
+
+
+async def test_call_raises_api_error_on_500_typed():
+    ctx, sess, _ = _mock_post(500)
+    with ctx as mock_sess_class:
+        mock_sess_class.return_value.__aenter__ = AsyncMock(return_value=sess)
+        mock_sess_class.return_value.__aexit__ = AsyncMock(return_value=None)
+        with pytest.raises(LogseqAPIError) as exc_info:
+            await _client()._call("logseq.Editor.getAllPages")
+        assert exc_info.value.status_code == 500
+        assert not isinstance(exc_info.value, (LogseqAuthError, LogseqNotFoundError))
+
+
+async def test_call_raises_connection_error_on_network_failure():
+    ctx = patch("aiohttp.ClientSession")
+    with ctx as mock_sess_class:
+        mock_sess_class.side_effect = aiohttp.ClientConnectorError(
+            connection_key=MagicMock(), os_error=OSError("boom")
+        )
+        with pytest.raises(LogseqConnectionError):
+            await _client()._call("logseq.Editor.getAllPages")
+
+
+async def test_call_raises_connection_error_on_timeout():
+    ctx = patch("aiohttp.ClientSession")
+    with ctx as mock_sess_class:
+        mock_sess_class.side_effect = asyncio.TimeoutError()
+        with pytest.raises(LogseqConnectionError):
+            await _client()._call("logseq.Editor.getAllPages")
