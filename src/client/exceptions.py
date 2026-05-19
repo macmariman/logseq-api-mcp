@@ -1,14 +1,12 @@
-"""Logseq API exception hierarchy."""
+"""Logseq HTTP API exception hierarchy."""
 
 
 class LogseqAPIError(Exception):
-    """Base for all Logseq HTTP API errors.
+    """Base class for any Logseq HTTP API failure with a status code.
 
-    Args:
-        message: Human-readable description.
-        status_code: HTTP status code if applicable.
-
-    Complexity: O(1).
+    @param message     Human-readable description.
+    @param status_code HTTP status code if applicable.
+    @complexity O(1).
     """
 
     def __init__(self, message: str, status_code: int | None = None) -> None:
@@ -16,13 +14,16 @@ class LogseqAPIError(Exception):
         self.status_code = status_code
 
 
-class LogseqNotFoundError(LogseqAPIError):
-    """Raised when a requested page or block does not exist (HTTP 404)."""
-
-
 class LogseqAuthError(LogseqAPIError):
-    """Raised when the API token is missing or invalid (HTTP 401/403)."""
+    """401 Unauthorized — bad or missing Bearer token."""
+
+
+class LogseqNotFoundError(LogseqAPIError):
+    """404 Not Found — unknown method or missing entity."""
 
 
 class LogseqConnectionError(LogseqAPIError):
-    """Raised when the Logseq HTTP server cannot be reached."""
+    """Network failure — connection refused, DNS failure, socket timeout.
+
+    Not raised for HTTP-level errors; those become LogseqAPIError subclasses.
+    """

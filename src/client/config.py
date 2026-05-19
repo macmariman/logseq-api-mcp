@@ -20,7 +20,7 @@ class LogseqConfig:
 
     endpoint: str
     token: str
-    verify_ssl: bool = False
+    verify_ssl: bool = True
     db_mode: bool = False
     exclude_tags: tuple[str, ...] = field(default_factory=tuple)
 
