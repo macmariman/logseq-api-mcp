@@ -1,9 +1,43 @@
 """Async HTTP client for the Logseq local API."""
 
+import asyncio
+import time
+from typing import Any
+
 import aiohttp
 
 from .config import LogseqConfig
-from .exceptions import LogseqAPIError, LogseqAuthError, LogseqConnectionError
+from .exceptions import (
+    LogseqAPIError,
+    LogseqAuthError,
+    LogseqConnectionError,
+    LogseqNotFoundError,
+)
+
+
+async def _interpret(response: aiohttp.ClientResponse, method: str) -> Any:
+    """Translate an aiohttp response into a value or a typed exception.
+
+    @param response aiohttp response object (already awaited as context manager).
+    @param method   The logseq method called, used for error messages.
+    @returns        Parsed JSON body when status == 200.
+    @throws LogseqAuthError, LogseqNotFoundError, LogseqAPIError.
+    @complexity O(1).
+    """
+    status = response.status
+    if status == 200:
+        try:
+            return await response.json()
+        except Exception:
+            return await response.text()
+    if status == 401:
+        raise LogseqAuthError(f"Auth failed calling {method}", status_code=401)
+    if status == 404:
+        raise LogseqNotFoundError(f"Unknown method {method}", status_code=404)
+    body = await response.text()
+    raise LogseqAPIError(
+        f"HTTP {status} from {method}: {body[:200]}", status_code=status
+    )
 
 
 class LogseqClient:
@@ -20,31 +54,28 @@ class LogseqClient:
 
     def __init__(self, config: LogseqConfig) -> None:
         self._config = config
+        self._excluded_cache: tuple[float, frozenset[str]] | None = None
 
     # ── Internal ─────────────────────────────────────────────────────────────
 
-    async def _call(self, method: str, args: list | None = None) -> object:
-        """Execute a single Logseq API JSON-RPC call.
+    async def _call(self, method: str, args: list | None = None) -> Any:
+        """Issue a JSON-RPC POST to /api and map HTTP status to typed exceptions.
 
-        Args:
-            method: Logseq API method name (e.g. 'logseq.Editor.getAllPages').
-            args: Positional arguments list for the method.
-
-        Returns:
-            Parsed JSON result from the API.
-
-        Raises:
-            LogseqAuthError: On HTTP 401 or 403.
-            LogseqAPIError: On any other non-200 HTTP status.
-            LogseqConnectionError: On network-level failures.
-
-        Complexity: O(1).
+        @param method  Logseq method name, e.g. "logseq.Editor.getAllPages".
+        @param args    Positional args list forwarded as JSON; defaults to [].
+        @returns       Parsed JSON response body.
+        @throws LogseqAuthError       on HTTP 401.
+        @throws LogseqNotFoundError   on HTTP 404.
+        @throws LogseqAPIError        on any other 4xx/5xx with status_code set.
+        @throws LogseqConnectionError on aiohttp connector errors and asyncio timeouts.
+        @complexity O(1) network call.
         """
         payload = {"method": method, "args": args or []}
         headers = {
             "Authorization": f"Bearer {self._config.token}",
             "Content-Type": "application/json",
         }
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -52,25 +83,11 @@ class LogseqClient:
                     json=payload,
                     headers=headers,
                     ssl=self._config.verify_ssl,
-                ) as resp:
-                    if resp.status in (401, 403):
-                        raise LogseqAuthError(
-                            f"Authentication failed for {method}",
-                            status_code=resp.status,
-                        )
-                    if resp.status != 200:
-                        raise LogseqAPIError(
-                            f"Logseq API error {resp.status} for {method}",
-                            status_code=resp.status,
-                        )
-                    return await resp.json(content_type=None)
-        except (LogseqAPIError, LogseqAuthError):
-            raise
-        except aiohttp.ClientConnectionError as exc:
-            raise LogseqConnectionError(f"Cannot connect to Logseq: {exc}") from exc
-        except Exception as exc:
+                ) as response:
+                    return await _interpret(response, method)
+        except (aiohttp.ClientConnectorError, asyncio.TimeoutError) as exc:
             raise LogseqConnectionError(
-                f"Unexpected error calling {method}: {exc}"
+                f"Cannot reach Logseq API at {self._config.endpoint}: {exc}"
             ) from exc
 
     # ── Page read operations ──────────────────────────────────────────────────
@@ -157,6 +174,41 @@ class LogseqClient:
         )
         return result if result is not None else []
 
+    async def excluded_page_names(self, ttl_seconds: float = 60.0) -> frozenset[str]:
+        """Return the lower-cased set of page names hidden by exclude_tags, cached.
+
+        @param ttl_seconds Cache lifetime; reuse last result if younger than ttl.
+        @returns           frozenset of lower-cased originalName values.
+        @complexity        O(N) on cache miss for N pages; O(1) on hit.
+        """
+        if not self._config.exclude_tags:
+            return frozenset()
+        now = time.monotonic()
+        if self._excluded_cache is not None:
+            cached_at, cached = self._excluded_cache
+            if now - cached_at < ttl_seconds:
+                return cached
+        from src.privacy.exclude_tags import (
+            extract_tags,  # local import to avoid cycle
+            is_page_excluded,  # local import to avoid cycle
+        )
+
+        pages = await self.get_all_pages()
+        lowered_excludes = tuple(t.lower() for t in self._config.exclude_tags)
+
+        def _excluded(page: dict) -> bool:
+            # Normalize page tags to lower-case so comparison is case-insensitive
+            # even before E1 lands case-insensitive support in is_page_excluded.
+            props = page.get("properties") or {}
+            lowered = [str(t).lower() for t in extract_tags(props)]
+            return is_page_excluded({"properties": {"tags": lowered}}, lowered_excludes)
+
+        excluded = frozenset(
+            str(p.get("originalName", "")).lower() for p in pages if _excluded(p)
+        )
+        self._excluded_cache = (time.monotonic(), excluded)
+        return excluded
+
     # ── Page write operations ─────────────────────────────────────────────────
 
     async def create_page(
@@ -165,24 +217,22 @@ class LogseqClient:
         properties: dict | None = None,
         fmt: str | None = None,
     ) -> dict:
-        """Create a new page.
+        """Create a new Logseq page.
 
-        Args:
-            title: Page title.
-            properties: Optional page-level properties dict.
-            fmt: Optional format string ('markdown' or 'org').
-
-        Returns:
-            Created page dict.
-
-        Complexity: O(1).
+        @param title      Page title (used as PageIdentity).
+        @param properties Optional bare properties dict (NOT nested under opts).
+        @param fmt        Optional format string ('markdown' | 'org'); becomes opts.format.
+        @returns          Created PageEntity dict (or empty dict if API returns null).
+        @throws LogseqAPIError on backend failure.
+        @complexity O(1) network call.
         """
-        options: dict = {}
-        if properties:
-            options["properties"] = properties
+        opts: dict = {}
         if fmt:
-            options["format"] = fmt
-        result = await self._call("logseq.Editor.createPage", [title, options])
+            opts["format"] = fmt
+        result = await self._call(
+            "logseq.Editor.createPage",
+            [title, properties or {}, opts],
+        )
         return result or {}
 
     async def delete_page(self, page_name: str) -> None:
@@ -244,22 +294,19 @@ class LogseqClient:
         content: str,
         options: dict | None = None,
     ) -> dict:
-        """Append a new block at the end of a page.
+        """Append a block at the bottom of a Logseq page.
 
-        Args:
-            page_identifier: Page name or UUID.
-            content: Block text content.
-            options: Optional block options dict.
-
-        Returns:
-            Created block dict.
-
-        Complexity: O(1).
+        @param page_identifier PageIdentity (name).
+        @param content         Markdown block content.
+        @param options         Optional opts dict per IEditorProxy (properties=…).
+        @returns               BlockEntity dict.
+        @throws LogseqAPIError on backend failure.
+        @complexity O(1).
         """
-        result = await self._call(
-            "logseq.Editor.appendBlockInPage",
-            [page_identifier, content],
-        )
+        args: list = [page_identifier, content]
+        if options is not None:
+            args.append(options)
+        result = await self._call("logseq.Editor.appendBlockInPage", args)
         return result or {}
 
     async def insert_block(
@@ -431,24 +478,25 @@ class LogseqClient:
         return result if result is not None else []
 
     async def resolve_page_uuids(self, uuids: list[str]) -> dict[str, str]:
-        """Resolve a list of page UUIDs to their display names.
+        """Resolve a batch of page UUIDs to their original names in one query.
 
-        Args:
-            uuids: List of UUID strings.
-
-        Returns:
-            Dict mapping uuid → page name.
-
-        Complexity: O(U) where U is uuid count (one API call per UUID).
+        @complexity O(1) network call (single datascript) + O(R) for R rows.
         """
-        result: dict[str, str] = {}
-        for uuid in uuids:
-            page = await self._call("logseq.Editor.getPage", [uuid])
-            if page and isinstance(page, dict):
-                name = page.get("originalName") or page.get("name")
-                if name:
-                    result[uuid] = name
-        return result
+        if not uuids:
+            return {}
+        safe = [u.replace("\\", "\\\\").replace('"', '\\"') for u in uuids]
+        or_clauses = " ".join(f'[?e :block/uuid "{u}"]' for u in safe)
+        query = (
+            "[:find ?uuid ?name "
+            ":where "
+            f"(or {or_clauses}) "
+            "[?e :block/uuid ?uuid] "
+            "[?e :block/original-name ?name]]"
+        )
+        rows = await self.datascript_query(query)
+        return {
+            row[0]: row[1] for row in rows if isinstance(row, list) and len(row) >= 2
+        }
 
     async def get_blocks_db_properties(self, blocks: list[dict]) -> dict[str, dict]:
         """Fetch DB-mode properties for a list of blocks.
@@ -474,18 +522,20 @@ class LogseqClient:
         return result
 
     async def resolve_property_ident(self, property_name: str) -> str | None:
-        """Resolve a property display name to its internal DB ident.
+        """Resolve a property display name to its DB-mode :db/ident keyword.
 
-        Args:
-            property_name: Human-readable property name (e.g. 'status').
-
-        Returns:
-            Internal ident string, or None if not found.
-
-        Complexity: O(1).
+        @param property_name User-facing property name (e.g. "status").
+        @returns             ":db/ident" string (e.g. ":user.property/status") or None when unknown.
+        @complexity O(1) network call.
         """
-        query = f'[:find ?e :where [?e :db/ident ?i] [(= (name ?i) "{property_name}")]]'
+        safe = property_name.replace("\\", "\\\\").replace('"', '\\"')
+        query = (
+            f'[:find ?ident :where [?e :block/title "{safe}"] [?e :db/ident ?ident]]'
+        )
         rows = await self.datascript_query(query)
-        if rows and rows[0]:
-            return rows[0][0]
+        if not rows:
+            return None
+        first = rows[0]
+        if isinstance(first, list) and first:
+            return str(first[0])
         return None

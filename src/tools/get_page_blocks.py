@@ -4,7 +4,7 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import load_config
+from src.client.config import LogseqConfig
 from src.tools.formatters.blocks import format_block_tree
 from src.logging_setup import get_logger
 
@@ -12,14 +12,18 @@ from src.logging_setup import get_logger
 _log = get_logger(__name__)
 
 
-async def _run(
+async def get_page_blocks(
     client: LogseqClient,
+    config: LogseqConfig,
     page_identifier: str,
 ) -> List[TextContent]:
-    """Fetch and format a page's block tree using an injected client.
+    """Get the tree structure of blocks that compose a page in Logseq.
+
+    Returns a hierarchical view of all blocks formatted for LLM consumption.
 
     Args:
-        client: LogseqClient instance.
+        client: LogseqClient instance (injected by the registry).
+        config: LogseqConfig (reserved for future privacy filtering).
         page_identifier: The name or UUID of the page to get blocks from.
 
     Returns:
@@ -58,19 +62,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error fetching page blocks: {exc}")]
-
-
-async def get_page_blocks(page_identifier: str) -> List[TextContent]:
-    """Get the tree structure of blocks that compose a page in Logseq.
-
-    Returns a hierarchical view of all blocks formatted for LLM consumption.
-
-    Args:
-        page_identifier: The name or UUID of the page to get blocks from.
-
-    Returns:
-        List with one TextContent containing the formatted block tree.
-
-    Complexity: O(N) where N is total block count.
-    """
-    return await _run(LogseqClient(load_config()), page_identifier)

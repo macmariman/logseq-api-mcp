@@ -4,7 +4,7 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.tools.formatters.pages import format_timestamp
 from src.logging_setup import get_logger
 
@@ -12,17 +12,17 @@ from src.logging_setup import get_logger
 _log = get_logger(__name__)
 
 
-async def _run(
+async def get_pages_from_namespace(
     client: LogseqClient,
     config: LogseqConfig,
     namespace: str,
 ) -> List[TextContent]:
-    """Fetch pages in a namespace using an injected client.
+    """Get all pages under a Logseq namespace hierarchy.
 
     Args:
-        client: LogseqClient instance.
+        client: LogseqClient instance (injected by the registry).
         config: LogseqConfig (reserved for future use).
-        namespace: The namespace prefix to list (e.g. "Project").
+        namespace: The namespace prefix to list (e.g. "Project" returns "Project/Alpha", etc.).
 
     Returns:
         List with one TextContent containing the namespace page listing.
@@ -57,18 +57,3 @@ async def _run(
         return [
             TextContent(type="text", text=f"❌ Error fetching namespace pages: {exc}")
         ]
-
-
-async def get_pages_from_namespace(namespace: str) -> List[TextContent]:
-    """Get all pages under a Logseq namespace hierarchy.
-
-    Args:
-        namespace: The namespace prefix to list (e.g. "Project" returns "Project/Alpha", etc.).
-
-    Returns:
-        List with one TextContent containing the namespace page listing.
-
-    Complexity: O(N) where N is page count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, namespace)

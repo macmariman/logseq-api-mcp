@@ -5,31 +5,40 @@ from typing import List, Optional
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
-from src.privacy.exclude_tags import filter_pages
+from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
-_VALID_PROP_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
+_VALID_PROP_RE = re.compile(r"^[A-Za-z0-9_.\-]+$")
+_VALUE_MAX = 256
 
 
 _log = get_logger(__name__)
 
 
-async def _run(
+def _escape_dsl_value(value: str) -> str:
+    """Escape a value for safe embedding inside a Logseq DSL double-quoted string.
+
+    Backslashes are escaped first so subsequent quote-escaping does not double-escape
+    the backslashes we just added.
+    """
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+async def find_pages_by_property(
     client: LogseqClient,
     config: LogseqConfig,
     property_name: str,
     property_value: Optional[str] = None,
     limit: int = 100,
 ) -> List[TextContent]:
-    """Find pages by property using an injected client.
+    """Find Logseq pages that have a specific property set.
 
     Args:
-        client: LogseqClient instance.
-        config: LogseqConfig (reserved for future use).
-        property_name: Property key to search for (alphanumeric/dash/underscore only).
-        property_value: Optional exact value to match.
-        limit: Maximum number of results to return.
+        client: LogseqClient instance (injected by the registry).
+        config: LogseqConfig (provides exclude_tags).
+        property_name: Property key to search for (alphanumeric, hyphens, underscores).
+        property_value: Optional exact value to match; omit to find all pages with the property.
+        limit: Maximum number of results to return (default 100).
 
     Returns:
         List with one TextContent containing matching pages.
@@ -38,16 +47,24 @@ async def _run(
     """
     try:
         _log.debug("%s called", __name__)
+        if property_value is not None and len(property_value) > _VALUE_MAX:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Property value exceeds maximum length of {_VALUE_MAX} characters (got {len(property_value)})",
+                )
+            ]
+
         if not _VALID_PROP_RE.match(property_name):
             return [
                 TextContent(
                     type="text",
-                    text=f"❌ Invalid property name '{property_name}': only letters, digits, hyphens, and underscores are allowed",
+                    text=f"❌ Invalid property name '{property_name}': only letters, digits, dots, hyphens, and underscores are allowed",
                 )
             ]
 
         if property_value is not None:
-            safe_value = property_value.replace('"', '\\"')
+            safe_value = _escape_dsl_value(property_value)
             dsl_query = (
                 f'[:find (pull ?p [*]) :where [?p :{property_name} "{safe_value}"]]'
             )
@@ -56,15 +73,13 @@ async def _run(
 
         items = await client.query_dsl(dsl_query)
 
-        if config.exclude_tags:
-            all_pages = await client.get_all_pages()
-            visible = filter_pages(all_pages, config.exclude_tags)
-            visible_names = {(p.get("name") or "").lower() for p in visible}
+        excluded_names: frozenset[str] = await client.excluded_page_names()
+        if excluded_names:
             items = [
                 it
                 for it in items
                 if (it.get("name") or it.get("originalName") or "").lower()
-                in visible_names
+                not in excluded_names
             ]
 
         items = items[:limit]
@@ -98,24 +113,3 @@ async def _run(
         return [
             TextContent(type="text", text=f"❌ Error finding pages by property: {exc}")
         ]
-
-
-async def find_pages_by_property(
-    property_name: str,
-    property_value: Optional[str] = None,
-    limit: int = 100,
-) -> List[TextContent]:
-    """Find Logseq pages that have a specific property set.
-
-    Args:
-        property_name: Property key to search for (alphanumeric, hyphens, underscores).
-        property_value: Optional exact value to match; omit to find all pages with the property.
-        limit: Maximum number of results to return (default 100).
-
-    Returns:
-        List with one TextContent containing matching pages.
-
-    Complexity: O(N) where N is result count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, property_name, property_value, limit)

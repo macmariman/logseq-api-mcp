@@ -2,7 +2,7 @@
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
-from src.tools.get_all_pages import _run
+from src.tools.get_all_pages import get_all_pages as _run
 
 
 def _page(name: str, journal: bool = False, tags: list | None = None) -> dict:
@@ -20,7 +20,7 @@ def _page(name: str, journal: bool = False, tags: list | None = None) -> dict:
 
 
 class TestGetAllPages:
-    """Test cases for get_all_pages._run()."""
+    """Test cases for get_all_pages()."""
 
     async def test_success_shows_listing_header(self):
         client = FakeLogseqClient({"get_all_pages": [_page("Test Page")]})

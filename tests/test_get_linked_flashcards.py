@@ -1,11 +1,14 @@
 """Tests for get_linked_flashcards tool."""
 
+from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
 from src.tools.get_linked_flashcards import (
-    _run,
+    get_linked_flashcards as _run,
     _find_flashcards_in_blocks,
     _extract_flashcard_question,
 )
+
+_cfg = LogseqConfig("http://x", "t")
 
 
 class TestExtractFlashcardQuestion:
@@ -74,7 +77,7 @@ class TestGetLinkedFlashcards:
                 "get_all_pages": [],
             }
         )
-        result = await _run(client, "Missing Page")
+        result = await _run(client, _cfg, "Missing Page")
         assert "not found" in result[0].text
 
     async def test_no_flashcards_returns_message(self):
@@ -96,7 +99,7 @@ class TestGetLinkedFlashcards:
                 ],
             }
         )
-        result = await _run(client, "mypage")
+        result = await _run(client, _cfg, "mypage")
         assert "No flashcards found" in result[0].text
 
     async def test_exception_returns_error(self):
@@ -104,5 +107,5 @@ class TestGetLinkedFlashcards:
             async def get_page_linked_references(self, page_name):
                 raise RuntimeError("network error")
 
-        result = await _run(ErrorClient(), "mypage")
+        result = await _run(ErrorClient(), _cfg, "mypage")
         assert "❌ Error fetching linked flashcards" in result[0].text

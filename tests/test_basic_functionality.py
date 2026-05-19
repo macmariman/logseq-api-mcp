@@ -2,7 +2,8 @@
 
 from unittest.mock import patch
 
-
+from src.client.config import LogseqConfig
+from src.client.logseq_client import LogseqClient
 from src.registry import register_all_tools
 from src.server import mcp
 from src.tools.get_all_pages import get_all_pages
@@ -21,8 +22,8 @@ class TestBasicFunctionality:
             get_all_pages,
             get_block_content,
             get_linked_flashcards,
+            get_page_backlinks,
             get_page_blocks,
-            get_page_links,
         )
 
         # Verify functions exist
@@ -33,7 +34,7 @@ class TestBasicFunctionality:
         assert callable(get_page_blocks)
         assert callable(get_block_content)
         assert callable(get_all_page_content)
-        assert callable(get_page_links)
+        assert callable(get_page_backlinks)
         assert callable(get_linked_flashcards)
 
     def test_server_initialization(self):
@@ -44,7 +45,9 @@ class TestBasicFunctionality:
     def test_tool_registration_doesnt_crash(self):
         """Test that tool registration doesn't crash."""
         # This should not raise any exceptions
-        register_all_tools(mcp)
+        cfg = LogseqConfig(endpoint="http://x/api", token="t")
+        client = LogseqClient(cfg)
+        register_all_tools(mcp, client, cfg)
 
     def test_environment_variables_handling(self):
         """Test that environment variables are handled correctly."""
@@ -77,7 +80,7 @@ class TestBasicFunctionality:
         sig = inspect.signature(create_page)
         assert "page_name" in sig.parameters
         assert "properties" in sig.parameters
-        assert "format" in sig.parameters
+        assert "fmt" in sig.parameters
 
         # append_block_in_page should accept page_identifier and content
         sig = inspect.signature(append_block_in_page)

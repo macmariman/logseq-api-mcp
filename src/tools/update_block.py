@@ -4,29 +4,29 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
 
 _log = get_logger(__name__)
 
 
-async def _run(
+async def update_block(
     client: LogseqClient,
     config: LogseqConfig,
     block_uuid: str,
     content: str,
 ) -> List[TextContent]:
-    """Update a block's content using an injected client.
+    """Update the content of a Logseq block.
 
     Args:
         client: LogseqClient instance.
         config: LogseqConfig (reserved for future use).
         block_uuid: UUID of the block to update.
-        content: New content string for the block.
+        content: New content string to set on the block.
 
     Returns:
-        List with one TextContent describing the result.
+        List with one TextContent describing success or failure.
 
     Complexity: O(1).
     """
@@ -50,19 +50,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error updating block: {exc}")]
-
-
-async def update_block(block_uuid: str, content: str) -> List[TextContent]:
-    """Update the content of a Logseq block.
-
-    Args:
-        block_uuid: UUID of the block to update.
-        content: New content string to set on the block.
-
-    Returns:
-        List with one TextContent describing success or failure.
-
-    Complexity: O(1).
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, block_uuid, content)

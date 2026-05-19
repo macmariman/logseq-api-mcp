@@ -4,36 +4,35 @@ from typing import Optional, List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import load_config
+from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
 
 _log = get_logger(__name__)
 
 
-async def _run(
+async def append_block_in_page(
     client: LogseqClient,
+    config: LogseqConfig,
     page_identifier: str,
     content: str,
     before: Optional[str] = None,
     sibling: Optional[str] = None,
     is_page_block: Optional[bool] = None,
 ) -> List[TextContent]:
-    """Append a block to a page using an injected client.
+    """Append a new block to a specified page in Logseq.
 
     Args:
-        client: LogseqClient instance.
-        page_identifier: The name or UUID of the target page.
-        content: Block text content.
+        client: LogseqClient instance (injected by the registry).
+        config: LogseqConfig (reserved for future use).
+        page_identifier: The name or UUID of the page to append the block to.
+        content: The content of the block to append.
         before: Optional UUID of a block to insert before.
         sibling: Optional UUID of a sibling block for positioning.
-        is_page_block: Optional flag to mark as page-level block.
+        is_page_block: Optional boolean to indicate if this is a page-level block.
 
     Returns:
-        List with one TextContent describing the result.
-
-    Raises:
-        Nothing — errors are caught and returned as TextContent.
+        List with one TextContent describing success or failure.
 
     Complexity: O(1).
     """
@@ -79,34 +78,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error appending block: {exc}")]
-
-
-async def append_block_in_page(
-    page_identifier: str,
-    content: str,
-    before: Optional[str] = None,
-    sibling: Optional[str] = None,
-    is_page_block: Optional[bool] = None,
-) -> List[TextContent]:
-    """Append a new block to a specified page in Logseq.
-
-    Args:
-        page_identifier: The name or UUID of the page to append the block to.
-        content: The content of the block to append.
-        before: Optional UUID of a block to insert before.
-        sibling: Optional UUID of a sibling block for positioning.
-        is_page_block: Optional boolean to indicate if this is a page-level block.
-
-    Returns:
-        List with one TextContent describing success or failure.
-
-    Complexity: O(1).
-    """
-    return await _run(
-        LogseqClient(load_config()),
-        page_identifier,
-        content,
-        before,
-        sibling,
-        is_page_block,
-    )

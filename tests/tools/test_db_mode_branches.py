@@ -4,6 +4,8 @@ Verifies that each tool correctly routes through its DB-mode code path
 when config.db_mode=True.
 """
 
+import pytest
+
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
 
@@ -11,12 +13,17 @@ _cfg_db = LogseqConfig("http://x", "t", db_mode=True)
 _cfg = LogseqConfig("http://x", "t", db_mode=False)
 
 
+@pytest.fixture
+def config_db_mode():
+    return LogseqConfig(endpoint="http://x/api", token="t", db_mode=True)
+
+
 # ── get_all_page_content: uuid resolution ─────────────────────────────────────
 
 
 class TestGetAllPageContentDbMode:
     async def test_resolve_refs_true_calls_resolve_page_uuids(self):
-        from src.tools.get_all_page_content import _run
+        from src.tools.get_all_page_content import get_all_page_content as _run
 
         _uuid = "12345678-1234-1234-1234-123456789012"
         page = {
@@ -47,7 +54,7 @@ class TestGetAllPageContentDbMode:
         assert any(c[0] == "resolve_page_uuids" for c in client.calls)
 
     async def test_resolve_refs_false_skips_uuid_resolution(self):
-        from src.tools.get_all_page_content import _run
+        from src.tools.get_all_page_content import get_all_page_content as _run
 
         page = {
             "id": 1,
@@ -63,7 +70,7 @@ class TestGetAllPageContentDbMode:
         assert not any(c[0] == "resolve_page_uuids" for c in client.calls)
 
     async def test_non_db_mode_skips_uuid_resolution(self):
-        from src.tools.get_all_page_content import _run
+        from src.tools.get_all_page_content import get_all_page_content as _run
 
         page = {
             "id": 1,
@@ -78,13 +85,35 @@ class TestGetAllPageContentDbMode:
         await _run(client, _cfg, "P", resolve_refs=True)
         assert not any(c[0] == "resolve_page_uuids" for c in client.calls)
 
+    async def test_get_all_page_content_resolves_uuid_via_get_page_first(
+        self, fake_client, config_db_mode
+    ):
+        fake_client.responses["get_page"] = {
+            "originalName": "Real Page",
+            "uuid": "u-123",
+        }
+        fake_client.responses["get_page_blocks_tree"] = [{"content": "hi", "uuid": "b"}]
+
+        from src.tools.get_all_page_content import get_all_page_content
+
+        await get_all_page_content(
+            fake_client,
+            config_db_mode,
+            page_identifier="0123abcd-1234-5678-9abc-0123456789ab",
+        )
+
+        methods = [c[0] for c in fake_client.calls]
+        assert methods.index("get_page") < methods.index("get_page_blocks_tree")
+        tree_call = next(c for c in fake_client.calls if c[0] == "get_page_blocks_tree")
+        assert tree_call[1][0] == "Real Page"
+
 
 # ── get_block_content: db properties ─────────────────────────────────────────
 
 
 class TestGetBlockContentDbMode:
     async def test_db_mode_calls_get_blocks_db_properties(self):
-        from src.tools.get_block_content import _run
+        from src.tools.get_block_content import get_block_content as _run
 
         block = {
             "id": 1,
@@ -105,7 +134,7 @@ class TestGetBlockContentDbMode:
         assert "priority" in result[0].text
 
     async def test_non_db_mode_skips_db_properties(self):
-        from src.tools.get_block_content import _run
+        from src.tools.get_block_content import get_block_content as _run
 
         block = {
             "id": 1,
@@ -125,7 +154,7 @@ class TestGetBlockContentDbMode:
 
 class TestSearchDbMode:
     async def test_db_mode_result_contains_db_page_format(self):
-        from src.tools.search import _run
+        from src.tools.search import search as _run
 
         db_result = {
             "blocks": [
@@ -138,7 +167,7 @@ class TestSearchDbMode:
         assert "DB Page Result" in result[0].text
 
     async def test_markdown_mode_result_uses_block_content_key(self):
-        from src.tools.search import _run
+        from src.tools.search import search as _run
 
         md_result = {
             "blocks": [
@@ -158,7 +187,7 @@ class TestSearchDbMode:
 
 class TestSetBlockPropertiesDbMode:
     async def test_db_mode_calls_resolve_property_ident_per_key(self):
-        from src.tools.set_block_properties import _run
+        from src.tools.set_block_properties import set_block_properties as _run
 
         block = {
             "id": 1,
@@ -178,7 +207,7 @@ class TestSetBlockPropertiesDbMode:
         assert any(c[0] == "resolve_property_ident" for c in client.calls)
 
     async def test_db_mode_uses_resolved_ident_when_found(self):
-        from src.tools.set_block_properties import _run
+        from src.tools.set_block_properties import set_block_properties as _run
 
         block = {
             "id": 1,
@@ -201,7 +230,7 @@ class TestSetBlockPropertiesDbMode:
         assert upsert_calls[0][1][1] == ":status"
 
     async def test_db_mode_falls_back_to_raw_name_when_ident_not_found(self):
-        from src.tools.set_block_properties import _run
+        from src.tools.set_block_properties import set_block_properties as _run
 
         block = {
             "id": 1,

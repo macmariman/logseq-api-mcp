@@ -2,7 +2,7 @@
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
-from src.tools.get_page_backlinks import _run
+from src.tools.get_page_backlinks import get_page_backlinks as _run
 
 _cfg = LogseqConfig("http://x", "t")
 

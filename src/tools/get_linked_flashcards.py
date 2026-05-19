@@ -4,7 +4,7 @@ from typing import Any, List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import load_config
+from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
 
@@ -70,12 +70,17 @@ def _find_flashcards_in_blocks(blocks: list[dict], page_info: dict) -> list[dict
 _log = get_logger(__name__)
 
 
-async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
-    """Find and format flashcards from a page and its links using an injected client.
+async def get_linked_flashcards(
+    client: LogseqClient,
+    config: LogseqConfig,
+    page_identifier: str,
+) -> List[TextContent]:
+    """Get flashcards from the specified page and all pages that link to it.
 
     Args:
-        client: LogseqClient instance.
-        page_identifier: The name or UUID of the target page.
+        client: LogseqClient instance (injected by the registry).
+        config: LogseqConfig (reserved for future use).
+        page_identifier: The name or UUID of the page to search flashcards from.
 
     Returns:
         List with one TextContent containing the flashcard analysis.
@@ -123,7 +128,9 @@ async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
         all_flashcards: list[dict] = []
         for page in pages_to_search:
             page_name_key = page.get("name") or page.get("id")
-            blocks = await client.get_page_blocks_tree(page_name_key)
+            if not page_name_key:
+                continue
+            blocks = await client.get_page_blocks_tree(str(page_name_key))
             if blocks:
                 all_flashcards.extend(_find_flashcards_in_blocks(blocks, page))
 
@@ -230,17 +237,3 @@ async def _run(client: LogseqClient, page_identifier: str) -> List[TextContent]:
         return [
             TextContent(type="text", text=f"❌ Error fetching linked flashcards: {exc}")
         ]
-
-
-async def get_linked_flashcards(page_identifier: str) -> List[TextContent]:
-    """Get flashcards from the specified page and all pages that link to it.
-
-    Args:
-        page_identifier: The name or UUID of the page to search flashcards from.
-
-    Returns:
-        List with one TextContent containing the flashcard analysis.
-
-    Complexity: O(P * B) where P is page count, B is average block count.
-    """
-    return await _run(LogseqClient(load_config()), page_identifier)

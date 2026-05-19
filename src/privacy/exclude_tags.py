@@ -1,57 +1,65 @@
-"""Pure tag-based page exclusion logic."""
+"""Tag-based page exclusion (pure functions; no I/O)."""
 
 
 def extract_tags(properties: dict) -> list[str]:
-    """Extract the tags list from a Logseq page properties dict.
+    """Return lower-cased tag list from a properties dict.
 
-    Args:
-        properties: Raw properties dict; 'tags' may be a list or comma-string.
+    Supports three Logseq shapes:
+      - list[str]:        ["a", "b"]
+      - comma-string:     "a, b"
+      - DB-mode list[dict]: [{"name": "a"}, {"name": "b"}]
 
-    Returns:
-        List of tag strings, stripped of surrounding whitespace.
-
-    Complexity: O(T) where T is tag count.
+    @param properties Properties dict; may be empty.
+    @returns          List of lower-cased tag strings, possibly empty.
+    @complexity O(T) where T is tag count.
     """
-    raw = properties.get("tags", [])
+    raw = properties.get("tags") if properties else None
+    if raw is None:
+        return []
     if isinstance(raw, str):
-        return [t.strip() for t in raw.split(",") if t.strip()]
+        return [t.strip().lower() for t in raw.split(",") if t.strip()]
     if isinstance(raw, list):
-        return [str(t).strip() for t in raw if str(t).strip()]
+        return [_coerce_tag(t) for t in raw if _coerce_tag(t)]
     return []
 
 
+def _coerce_tag(value: object) -> str:
+    """Lower-case a single tag value regardless of its serialization shape.
+
+    @param value Either a string, a dict with a 'name' key, or anything else (→ "").
+    @returns     Lower-cased name string.
+    @complexity  O(1).
+    """
+    if isinstance(value, str):
+        return value.strip().lower()
+    if isinstance(value, dict):
+        name = value.get("name") or value.get("title") or ""
+        return str(name).strip().lower()
+    return ""
+
+
 def is_page_excluded(page: dict, exclude_tags: tuple[str, ...]) -> bool:
-    """Return True if the page carries any tag in the exclusion tuple.
+    """Return True when the page carries any excluded tag.
 
-    Args:
-        page: Raw Logseq page dict; may have a 'properties' sub-dict.
-        exclude_tags: Tuple of tags to exclude. Empty tuple = no exclusion.
-
-    Returns:
-        True when the page should be hidden; False otherwise.
-
-    Complexity: O(T) where T is tag count on the page.
+    @param page         Logseq page dict.
+    @param exclude_tags Tuple of tag names; empty → never exclude.
+    @returns            Boolean.
+    @complexity O(T + E) where T is page tags, E is exclusion list length.
     """
     if not exclude_tags:
         return False
-    props = page.get("properties") or {}
-    return any(t in exclude_tags for t in extract_tags(props))
+    excluded_lower = {t.lower() for t in exclude_tags}
+    page_tags = extract_tags(page.get("properties", {}) or {})
+    return any(t in excluded_lower for t in page_tags)
 
 
 def filter_pages(
     pages: list[dict],
     exclude_tags: tuple[str, ...],
 ) -> list[dict]:
-    """Return a new list with excluded pages removed.
+    """Return a new list with excluded pages removed (input not mutated).
 
-    Args:
-        pages: Input list (not mutated).
-        exclude_tags: Tags causing exclusion.
-
-    Returns:
-        New list without excluded pages.
-
-    Complexity: O(N * T) where N is page count, T is max tag count per page.
+    @complexity O(N * (T + E)) where N is page count.
     """
     if not exclude_tags:
         return list(pages)

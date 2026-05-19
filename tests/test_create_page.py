@@ -2,7 +2,7 @@
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
-from src.tools.create_page import _run
+from src.tools.create_page import create_page as _run
 
 _cfg = LogseqConfig("http://x", "t")
 _page_result = {

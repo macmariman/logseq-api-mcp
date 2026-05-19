@@ -92,6 +92,11 @@ def test_config_is_immutable():
         cfg.token = "z"  # type: ignore[misc]
 
 
+def test_logseq_config_default_verify_ssl_is_true():
+    cfg = LogseqConfig(endpoint="http://x", token="y")
+    assert cfg.verify_ssl is True
+
+
 def test_load_config_api_url_trailing_slash_stripped(monkeypatch):
     monkeypatch.setenv("LOGSEQ_API_TOKEN", "tok")
     monkeypatch.delenv("LOGSEQ_API_ENDPOINT", raising=False)

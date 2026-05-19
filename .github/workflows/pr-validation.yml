@@ -7,7 +7,7 @@ on:
 jobs:
   validate-tools:
     runs-on: ubuntu-latest
-    name: Validate Tool Count (≥21 standard tools)
+    name: Validate Tool Count (21 standard tools)
 
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --group test
 
-      - name: Verify ≥21 standard tools are registered
+      - name: Verify 21 standard tools are registered
         run: |
           uv run python -c "
           from src import tools
@@ -32,25 +32,19 @@ jobs:
           print(f'Standard tools discovered: {count}')
           print(f'Tool list: {sorted(tools.__all__)}')
 
-          required = [
+          expected = [
               'append_block_in_page', 'create_page', 'delete_block', 'delete_page',
               'edit_block', 'find_pages_by_property', 'get_all_page_content',
               'get_all_pages', 'get_block_content', 'get_linked_flashcards',
-              'get_page_backlinks', 'get_page_blocks', 'get_page_links',
+              'get_page_backlinks', 'get_page_blocks',
               'get_pages_from_namespace', 'get_pages_tree_from_namespace',
               'insert_nested_block', 'query', 'rename_page', 'search',
               'set_block_properties', 'update_block', 'update_page',
           ]
 
-          missing = [t for t in required if t not in tools.__all__]
-          if missing:
-              print(f'FAIL: Missing tools: {missing}')
-              raise SystemExit(1)
-
-          if count < 21:
-              print(f'FAIL: Expected ≥21 standard tools, found {count}')
-              raise SystemExit(1)
-
+          assert sorted(tools.__all__) == sorted(expected), \
+              f'Tool list mismatch.\nExpected: {sorted(expected)}\nFound: {sorted(tools.__all__)}'
+          assert len(tools.__all__) == 21
           print(f'✅ All {count} standard tools present')
           "
 

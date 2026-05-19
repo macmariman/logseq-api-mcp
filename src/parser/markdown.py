@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import re
-import logging
 from dataclasses import dataclass, field
 
-logger = logging.getLogger(__name__)
+import yaml
 
 # ── Regex patterns ────────────────────────────────────────────────────────────
 
-_FRONTMATTER = re.compile(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
 _HEADING = re.compile(r"^(#{1,6})\s+(.+)$")
 _BULLET = re.compile(r"^(\s*)([-*+])\s+(.*)$")
 _NUMBERED = re.compile(r"^(\s*)(\d+)\.\s+(.*)$")
@@ -96,39 +94,29 @@ class ParsedContent:
 
 
 def _parse_frontmatter(text: str) -> tuple[dict, str]:
-    """Extract YAML frontmatter and return (properties, remaining_text).
+    """Extract YAML frontmatter and return (properties, remaining_markdown).
 
     Args:
-        text: Raw markdown string.
+        text: Full markdown document.
 
     Returns:
-        Tuple of (properties dict, text with frontmatter removed).
+        Tuple of (properties dict, markdown body).
 
-    Complexity: O(F) where F is frontmatter length.
+    Complexity: O(L) where L is line count.
     """
-    match = _FRONTMATTER.match(text)
-    if not match:
+    if not text.startswith("---\n"):
         return {}, text
-
+    closing = text.find("\n---\n", 4)
+    if closing == -1:
+        return {}, text
+    raw = text[4:closing]
     try:
-        import yaml  # type: ignore[import]
-
-        props = yaml.safe_load(match.group(1)) or {}
-        if not isinstance(props, dict):
-            props = {}
-    except Exception:
-        try:
-            # Minimal fallback: parse 'key: value' lines
-            props = {}
-            for line in match.group(1).splitlines():
-                if ":" in line:
-                    k, _, v = line.partition(":")
-                    props[k.strip()] = v.strip()
-        except Exception as exc:
-            logger.debug("Frontmatter parse fallback failed: %s", exc)
-            props = {}
-
-    return props, text[match.end() :]
+        loaded = yaml.safe_load(raw) or {}
+    except yaml.YAMLError:
+        return {}, text
+    if not isinstance(loaded, dict):
+        return {}, text
+    return loaded, text[closing + 5 :]
 
 
 # ── Indent helpers ────────────────────────────────────────────────────────────

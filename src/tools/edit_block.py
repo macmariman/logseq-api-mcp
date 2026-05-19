@@ -4,33 +4,35 @@ from typing import Any, Dict, List, Optional
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import load_config
+from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
 
 _log = get_logger(__name__)
 
 
-async def _run(
+async def edit_block(
     client: LogseqClient,
+    config: LogseqConfig,
     block_identity: str,
     content: Optional[str] = None,
     properties: Optional[Dict[str, Any]] = None,
     cursor_position: Optional[int] = None,
     focus: Optional[bool] = None,
 ) -> List[TextContent]:
-    """Edit a block using an injected client.
+    """Edit a block in Logseq.
 
     Args:
         client: LogseqClient instance.
-        block_identity: The UUID of the block to edit.
+        config: LogseqConfig (reserved for future use).
+        block_identity: The UUID of the block to edit (BlockIdentity).
         content: Optional new content for the block.
-        properties: Optional properties dict to update.
-        cursor_position: Optional cursor position (0-based).
+        properties: Optional dictionary of properties to update on the block.
+        cursor_position: Optional cursor position for editing (0-based index).
         focus: Optional boolean to focus the block after editing.
 
     Returns:
-        List with one TextContent describing the result.
+        List with one TextContent describing success or failure.
 
     Complexity: O(1).
     """
@@ -91,34 +93,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error editing block: {exc}")]
-
-
-async def edit_block(
-    block_identity: str,
-    content: Optional[str] = None,
-    properties: Optional[Dict[str, Any]] = None,
-    cursor_position: Optional[int] = None,
-    focus: Optional[bool] = None,
-) -> List[TextContent]:
-    """Edit a block in Logseq.
-
-    Args:
-        block_identity: The UUID of the block to edit (BlockIdentity).
-        content: Optional new content for the block.
-        properties: Optional dictionary of properties to update on the block.
-        cursor_position: Optional cursor position for editing (0-based index).
-        focus: Optional boolean to focus the block after editing.
-
-    Returns:
-        List with one TextContent describing success or failure.
-
-    Complexity: O(1).
-    """
-    return await _run(
-        LogseqClient(load_config()),
-        block_identity,
-        content,
-        properties,
-        cursor_position,
-        focus,
-    )

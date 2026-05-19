@@ -4,8 +4,7 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
-from src.privacy.exclude_tags import filter_pages
+from src.client.config import LogseqConfig
 from src.tools.formatters.pages import format_timestamp
 from src.logging_setup import get_logger
 
@@ -64,19 +63,19 @@ def _format_linking_page(
 _log = get_logger(__name__)
 
 
-async def _run(
+async def get_page_backlinks(
     client: LogseqClient,
     config: LogseqConfig,
     page_identifier: str,
     include_content: bool = True,
 ) -> List[TextContent]:
-    """Fetch and format backlinks using an injected client.
+    """Get pages that link to the specified page with comprehensive metadata.
 
     Args:
-        client: LogseqClient instance.
-        config: LogseqConfig (reserved for future privacy filtering).
-        page_identifier: The name or UUID of the target page.
-        include_content: When True, show the content of each referencing block.
+        client: LogseqClient instance (injected by the registry).
+        config: LogseqConfig (provides exclude_tags for privacy filtering).
+        page_identifier: The name or UUID of the page to find backlinks for.
+        include_content: When True, include the text of each referencing block.
 
     Returns:
         List with one TextContent containing the backlink analysis.
@@ -93,18 +92,7 @@ async def _run(
                 )
             ]
 
-        all_pages = await client.get_all_pages()
-        visible_pages = (
-            filter_pages(all_pages, config.exclude_tags)
-            if config.exclude_tags
-            else all_pages
-        )
-        visible_ids = {
-            p.get("id") for p in visible_pages if isinstance(p, dict) and p.get("id")
-        }
-        page_lookup = {
-            p.get("id"): p for p in all_pages if isinstance(p, dict) and p.get("id")
-        }
+        excluded_names: frozenset[str] = await client.excluded_page_names()
 
         enriched: list[dict] = []
         for group in linked_refs:
@@ -113,13 +101,16 @@ async def _run(
             page_ref = group[0]
             if not isinstance(page_ref, dict):
                 continue
-            if config.exclude_tags and page_ref.get("id") not in visible_ids:
+            ref_name = (
+                page_ref.get("originalName") or page_ref.get("name") or ""
+            ).lower()
+            if excluded_names and ref_name in excluded_names:
                 continue
             ref_blocks = [b for b in group[1:] if isinstance(b, dict)]
             enriched.append(
                 {
                     "ref": page_ref,
-                    "full": page_lookup.get(page_ref.get("id")),
+                    "full": None,
                     "blocks": ref_blocks,
                 }
             )
@@ -164,22 +155,3 @@ async def _run(
         return [
             TextContent(type="text", text=f"❌ Error fetching page backlinks: {exc}")
         ]
-
-
-async def get_page_backlinks(
-    page_identifier: str,
-    include_content: bool = True,
-) -> List[TextContent]:
-    """Get pages that link to the specified page with comprehensive metadata.
-
-    Args:
-        page_identifier: The name or UUID of the page to find backlinks for.
-        include_content: When True, include the text of each referencing block.
-
-    Returns:
-        List with one TextContent containing the backlink analysis.
-
-    Complexity: O(P + R) where P is page count, R is reference count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, page_identifier, include_content)

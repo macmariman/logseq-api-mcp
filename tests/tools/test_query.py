@@ -2,7 +2,7 @@
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
-from src.tools.query import _run
+from src.tools.query import query as _run
 
 _cfg = LogseqConfig("http://x", "t")
 _cfg_excl = LogseqConfig("http://x", "t", exclude_tags=("private",))
@@ -58,7 +58,13 @@ class TestQuery:
                 "uuid": "b1",
             }
         ]
-        client = FakeLogseqClient({"query_dsl": items, "get_all_pages": pages})
+        client = FakeLogseqClient(
+            {
+                "query_dsl": items,
+                "get_all_pages": pages,
+                "excluded_page_names": frozenset({"secret"}),
+            }
+        )
         result = await _run(client, _cfg_excl, "query")
         assert "Secret" not in result[0].text
 

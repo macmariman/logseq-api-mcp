@@ -5,7 +5,7 @@ import json
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
-from src.tools.get_all_page_content import _run
+from src.tools.get_all_page_content import get_all_page_content as _run
 
 
 def _page(name: str) -> dict:
