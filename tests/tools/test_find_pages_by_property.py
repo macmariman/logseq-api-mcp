@@ -77,3 +77,36 @@ class TestFindPagesByProperty:
 
         result = await _run(ErrorClient(), _cfg, "valid-prop")
         assert "❌ Error finding pages" in result[0].text
+
+
+async def test_find_accepts_namespaced_property_name(fake_client, config):
+    fake_client.responses["query_dsl"] = []
+    from src.tools.find_pages_by_property import find_pages_by_property
+
+    result = await find_pages_by_property(fake_client, config, "logseq.order-list-type")
+    assert "Invalid property name" not in result[0].text
+
+
+async def test_find_rejects_property_name_with_space(fake_client, config):
+    from src.tools.find_pages_by_property import find_pages_by_property
+
+    result = await find_pages_by_property(fake_client, config, "bad name")
+    assert "Invalid property name" in result[0].text
+
+
+async def test_find_escapes_backslash_and_quote_in_value(fake_client, config):
+    fake_client.responses["query_dsl"] = []
+    from src.tools.find_pages_by_property import find_pages_by_property
+
+    await find_pages_by_property(fake_client, config, "status", 'bad"\\value')
+    query = next(c for c in fake_client.calls if c[0] == "query_dsl")[1][0]
+    assert '\\"' in query
+    assert "\\\\" in query
+
+
+async def test_find_caps_property_value_at_256_chars(fake_client, config):
+    from src.tools.find_pages_by_property import find_pages_by_property
+
+    long_value = "x" * 1000
+    result = await find_pages_by_property(fake_client, config, "status", long_value)
+    assert "exceeds" in result[0].text.lower() or "too long" in result[0].text.lower()

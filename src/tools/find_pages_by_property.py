@@ -8,10 +8,20 @@ from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
-_VALID_PROP_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
+_VALID_PROP_RE = re.compile(r"^[A-Za-z0-9_.\-]+$")
+_VALUE_MAX = 256
 
 
 _log = get_logger(__name__)
+
+
+def _escape_dsl_value(value: str) -> str:
+    """Escape a value for safe embedding inside a Logseq DSL double-quoted string.
+
+    Backslashes are escaped first so subsequent quote-escaping does not double-escape
+    the backslashes we just added.
+    """
+    return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
 async def find_pages_by_property(
@@ -37,16 +47,24 @@ async def find_pages_by_property(
     """
     try:
         _log.debug("%s called", __name__)
+        if property_value is not None and len(property_value) > _VALUE_MAX:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Property value exceeds maximum length of {_VALUE_MAX} characters (got {len(property_value)})",
+                )
+            ]
+
         if not _VALID_PROP_RE.match(property_name):
             return [
                 TextContent(
                     type="text",
-                    text=f"❌ Invalid property name '{property_name}': only letters, digits, hyphens, and underscores are allowed",
+                    text=f"❌ Invalid property name '{property_name}': only letters, digits, dots, hyphens, and underscores are allowed",
                 )
             ]
 
         if property_value is not None:
-            safe_value = property_value.replace('"', '\\"')
+            safe_value = _escape_dsl_value(property_value)
             dsl_query = (
                 f'[:find (pull ?p [*]) :where [?p :{property_name} "{safe_value}"]]'
             )
