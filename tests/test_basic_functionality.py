@@ -22,8 +22,8 @@ class TestBasicFunctionality:
             get_all_pages,
             get_block_content,
             get_linked_flashcards,
+            get_page_backlinks,
             get_page_blocks,
-            get_page_links,
         )
 
         # Verify functions exist
@@ -34,7 +34,7 @@ class TestBasicFunctionality:
         assert callable(get_page_blocks)
         assert callable(get_block_content)
         assert callable(get_all_page_content)
-        assert callable(get_page_links)
+        assert callable(get_page_backlinks)
         assert callable(get_linked_flashcards)
 
     def test_server_initialization(self):
