@@ -128,7 +128,9 @@ async def get_linked_flashcards(
         all_flashcards: list[dict] = []
         for page in pages_to_search:
             page_name_key = page.get("name") or page.get("id")
-            blocks = await client.get_page_blocks_tree(page_name_key)
+            if not page_name_key:
+                continue
+            blocks = await client.get_page_blocks_tree(str(page_name_key))
             if blocks:
                 all_flashcards.extend(_find_flashcards_in_blocks(blocks, page))
 

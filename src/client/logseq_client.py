@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+from typing import Any
 
 import aiohttp
 
@@ -14,7 +15,7 @@ from .exceptions import (
 )
 
 
-async def _interpret(response: aiohttp.ClientResponse, method: str) -> object:
+async def _interpret(response: aiohttp.ClientResponse, method: str) -> Any:
     """Translate an aiohttp response into a value or a typed exception.
 
     @param response aiohttp response object (already awaited as context manager).
@@ -57,7 +58,7 @@ class LogseqClient:
 
     # ── Internal ─────────────────────────────────────────────────────────────
 
-    async def _call(self, method: str, args: list | None = None) -> object:
+    async def _call(self, method: str, args: list | None = None) -> Any:
         """Issue a JSON-RPC POST to /api and map HTTP status to typed exceptions.
 
         @param method  Logseq method name, e.g. "logseq.Editor.getAllPages".
