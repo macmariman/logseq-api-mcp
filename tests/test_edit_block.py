@@ -1,110 +1,41 @@
 """Tests for edit_block tool."""
 
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
-
-from src.tools.edit_block import edit_block
+from tests.conftest import FakeLogseqClient
+from src.tools.edit_block import _run
 
 
 class TestEditBlock:
-    """Test cases for edit_block function."""
+    async def test_success_message(self):
+        client = FakeLogseqClient({"edit_block": {"uuid": "block-123"}})
+        result = await _run(client, "block-123", content="updated content")
+        assert "BLOCK EDITED SUCCESSFULLY" in result[0].text
+        assert "block-123" in result[0].text
 
-    @pytest.mark.asyncio
-    async def test_edit_block_success_content(
-        self, mock_env_vars, mock_aiohttp_session
-    ):
-        """Test successful block edit with content."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"success": True})
+    async def test_content_update_shown(self):
+        client = FakeLogseqClient({"edit_block": {"uuid": "b"}})
+        result = await _run(client, "b", content="new content")
+        assert "Content updated" in result[0].text
+        assert "new content" in result[0].text
 
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+    async def test_properties_update_shown(self):
+        client = FakeLogseqClient({"edit_block": {"uuid": "b"}})
+        result = await _run(client, "b", properties={"status": "done"})
+        assert "Properties updated" in result[0].text
 
-        result = await edit_block("block-uuid-123", content="Updated content")
+    async def test_cursor_position_shown(self):
+        client = FakeLogseqClient({"edit_block": {"uuid": "b"}})
+        result = await _run(client, "b", content="text", cursor_position=5)
+        assert "Cursor positioned at index 5" in result[0].text
 
-        assert len(result) == 1
-        assert "✅ **BLOCK EDITED SUCCESSFULLY**" in result[0].text
-        assert "📝 **UPDATED CONTENT:**" in result[0].text
+    async def test_focus_enabled_shown(self):
+        client = FakeLogseqClient({"edit_block": {"uuid": "b"}})
+        result = await _run(client, "b", focus=True)
+        assert "Focus: Enabled" in result[0].text
 
-    @pytest.mark.asyncio
-    async def test_edit_block_success_properties(
-        self, mock_env_vars, mock_aiohttp_session
-    ):
-        """Test successful block edit with properties."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"success": True})
+    async def test_exception_returns_error(self):
+        class ErrorClient(FakeLogseqClient):
+            async def edit_block(self, block_uuid, **kwargs):
+                raise RuntimeError("lost connection")
 
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
-
-        properties = {"status": "completed", "priority": "high"}
-        result = await edit_block("block-uuid-123", properties=properties)
-
-        assert len(result) == 1
-        assert "✅ **BLOCK EDITED SUCCESSFULLY**" in result[0].text
-        assert "⚙️ **UPDATED PROPERTIES:**" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_edit_block_success_options(
-        self, mock_env_vars, mock_aiohttp_session
-    ):
-        """Test successful block edit with options."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"success": True})
-
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
-
-        result = await edit_block(
-            "block-uuid-123", content="Updated content", cursor_position=10, focus=True
-        )
-
-        assert len(result) == 1
-        assert "✅ **BLOCK EDITED SUCCESSFULLY**" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_edit_block_http_error(self, mock_env_vars, mock_aiohttp_session):
-        """Test block edit with HTTP error."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 500
-
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
-
-        result = await edit_block("block-uuid-123", content="Updated content")
-
-        assert len(result) == 1
-        assert "❌ Failed to edit block: HTTP 500" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_edit_block_exception(self, mock_env_vars, mock_aiohttp_session):
-        """Test block edit with exception."""
-        # Setup session mock to raise exception
-        mock_aiohttp_session._session_instance.post.side_effect = Exception(
-            "Network error"
-        )
-
-        result = await edit_block("block-uuid-123", content="Updated content")
-
-        assert len(result) == 1
-        assert "❌ Error editing block: Network error" in result[0].text
+        result = await _run(ErrorClient(), "b", content="text")
+        assert "❌ Error editing block: lost connection" in result[0].text

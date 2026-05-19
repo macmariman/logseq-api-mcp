@@ -1,0 +1,157 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate-tools:
+    runs-on: ubuntu-latest
+    name: Validate Tool Count (≥21 standard tools)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group test
+
+      - name: Verify ≥21 standard tools are registered
+        run: |
+          uv run python -c "
+          from src import tools
+
+          count = len(tools.__all__)
+          print(f'Standard tools discovered: {count}')
+          print(f'Tool list: {sorted(tools.__all__)}')
+
+          required = [
+              'append_block_in_page', 'create_page', 'delete_block', 'delete_page',
+              'edit_block', 'find_pages_by_property', 'get_all_page_content',
+              'get_all_pages', 'get_block_content', 'get_linked_flashcards',
+              'get_page_backlinks', 'get_page_blocks', 'get_page_links',
+              'get_pages_from_namespace', 'get_pages_tree_from_namespace',
+              'insert_nested_block', 'query', 'rename_page', 'search',
+              'set_block_properties', 'update_block', 'update_page',
+          ]
+
+          missing = [t for t in required if t not in tools.__all__]
+          if missing:
+              print(f'FAIL: Missing tools: {missing}')
+              raise SystemExit(1)
+
+          if count < 21:
+              print(f'FAIL: Expected ≥21 standard tools, found {count}')
+              raise SystemExit(1)
+
+          print(f'✅ All {count} standard tools present')
+          "
+
+  validate-coverage:
+    runs-on: ubuntu-latest
+    name: Coverage Gate (≥85%)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group test
+
+      - name: Run tests with coverage gate
+        run: |
+          uv run pytest tests/ \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=85 \
+            -q
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-coverage-report
+          path: coverage.xml
+
+  validate-lint:
+    runs-on: ubuntu-latest
+    name: Lint & Format
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group test
+
+      - name: Ruff lint
+        run: uv run ruff check src/ tests/
+
+      - name: Ruff format check
+        run: uv run ruff format --check src/ tests/
+
+  pr-gate:
+    runs-on: ubuntu-latest
+    needs: [validate-tools, validate-coverage, validate-lint]
+    if: always()
+    name: PR Gate Summary
+
+    steps:
+      - name: Summary
+        run: |
+          echo "🔍 PR Validation Summary"
+          echo "========================"
+
+          ok=true
+
+          if [ "${{ needs.validate-tools.result }}" == "success" ]; then
+            echo "✅ Tool count: PASSED"
+          else
+            echo "❌ Tool count: FAILED"
+            ok=false
+          fi
+
+          if [ "${{ needs.validate-coverage.result }}" == "success" ]; then
+            echo "✅ Coverage ≥85%: PASSED"
+          else
+            echo "❌ Coverage ≥85%: FAILED"
+            ok=false
+          fi
+
+          if [ "${{ needs.validate-lint.result }}" == "success" ]; then
+            echo "✅ Lint & format: PASSED"
+          else
+            echo "❌ Lint & format: FAILED"
+            ok=false
+          fi
+
+          if [ "$ok" == "true" ]; then
+            echo ""
+            echo "🎉 PR validation passed — ready for review"
+          else
+            echo ""
+            echo "❌ PR validation failed — address issues before merging"
+            exit 1
+          fi

@@ -1,134 +1,132 @@
-import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+"""Create a new page in Logseq."""
 
-import aiohttp
-from dotenv import load_dotenv
+from typing import Any, Dict, List, Optional
 from mcp.types import TextContent
 
-# Load environment variables from .env file in project root
-env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(env_path)
+from src.client.logseq_client import LogseqClient
+from src.client.config import LogseqConfig, load_config
+from src.parser.markdown import parse_content
+from src.logging_setup import get_logger
+
+
+_log = get_logger(__name__)
+
+
+async def _run(
+    client: LogseqClient,
+    config: LogseqConfig,
+    page_name: str,
+    properties: Optional[Dict[str, Any]] = None,
+    fmt: Optional[str] = None,
+    content: Optional[str] = None,
+) -> List[TextContent]:
+    """Create a page using an injected client, optionally inserting parsed content.
+
+    Args:
+        client: LogseqClient instance.
+        config: LogseqConfig (reserved for future use).
+        page_name: The name of the page to create.
+        properties: Optional page-level properties dict.
+        fmt: Optional format string ('markdown' or 'org').
+        content: Optional markdown string; parsed and inserted as blocks.
+
+    Returns:
+        List with one TextContent describing the result.
+
+    Complexity: O(B) where B is parsed block count.
+    """
+    try:
+        _log.debug("%s called", __name__)
+        merged_props = dict(properties or {})
+        batch_blocks: list[dict] = []
+
+        if content and content.strip():
+            parsed = parse_content(content)
+            if parsed.properties:
+                merged_props = {**parsed.properties, **merged_props}
+            batch_blocks = parsed.to_batch_format()
+
+        result = await client.create_page(
+            page_name,
+            properties=merged_props or None,
+            fmt=fmt,
+        )
+
+        if not result:
+            return [
+                TextContent(
+                    type="text",
+                    text="❌ Failed to create page: No response from Logseq API",
+                )
+            ]
+
+        lines = ["✅ **PAGE CREATED SUCCESSFULLY**", f"📄 Page Name: {page_name}", ""]
+
+        if isinstance(result, dict):
+            page_id = result.get("id", "N/A")
+            page_uuid = result.get("uuid", "N/A")
+            original_name = result.get("originalName", page_name)
+            is_journal = result.get("journal?", False)
+            page_format = result.get("format", "markdown")
+
+            lines.extend(
+                [
+                    "📊 **PAGE DETAILS:**",
+                    f"• ID: {page_id}",
+                    f"• UUID: {page_uuid}",
+                    f"• Original Name: {original_name}",
+                    f"• Format: {page_format}",
+                    f"• Journal Page: {'Yes' if is_journal else 'No'}",
+                    "",
+                ]
+            )
+
+            page_properties = result.get("properties", {})
+            if page_properties:
+                lines.extend(
+                    [
+                        "⚙️ **PAGE PROPERTIES:**",
+                        *[f"• {k}: {v}" for k, v in page_properties.items()],
+                        "",
+                    ]
+                )
+
+        if merged_props:
+            lines.append(f"⚙️ Properties set: {len(merged_props)} items")
+        if fmt:
+            lines.append(f"📝 Format: {fmt}")
+
+        if batch_blocks:
+            page_uuid = result.get("uuid") if isinstance(result, dict) else None
+            if page_uuid:
+                await client.insert_batch_block(page_uuid, batch_blocks, sibling=False)
+            lines.append(f"📝 Content blocks inserted: {len(batch_blocks)}")
+
+        return [TextContent(type="text", text="\n".join(lines))]
+
+    except Exception as exc:
+        _log.error("exception in %s: %s", __name__, exc, exc_info=True)
+        return [TextContent(type="text", text=f"❌ Error creating page: {exc}")]
 
 
 async def create_page(
     page_name: str,
     properties: Optional[Dict[str, Any]] = None,
     format: Optional[str] = None,
+    content: Optional[str] = None,
 ) -> List[TextContent]:
-    """
-    Create a new page in Logseq.
-
-    This tool allows you to create new pages in your Logseq graph with optional
-    properties and format specifications. The page will be created and can be
-    immediately used for adding content.
+    """Create a new page in Logseq with optional markdown content.
 
     Args:
-        page_name: The name of the page to create
-        properties: Optional dictionary of properties to set on the page
-        format: Optional format for the page ("markdown" or "org")
+        page_name: The name of the page to create.
+        properties: Optional dictionary of properties to set on the page.
+        format: Optional format for the page ('markdown' or 'org').
+        content: Optional markdown content; parsed into blocks and inserted.
+
+    Returns:
+        List with one TextContent describing success or failure.
+
+    Complexity: O(B) where B is parsed block count.
     """
-    endpoint = os.getenv("LOGSEQ_API_ENDPOINT", "http://127.0.0.1:12315/api")
-    token = os.getenv("LOGSEQ_API_TOKEN", "auth")
-
-    headers = {"Authorization": f"Bearer {token}"}
-
-    # Build options object
-    options: dict[str, Any] = {}
-    if properties:
-        options["properties"] = properties
-    if format:
-        options["format"] = format
-
-    async with aiohttp.ClientSession() as session:
-        try:
-            # Prepare the API call
-            payload = {
-                "method": "logseq.Editor.createPage",
-                "args": [page_name, options] if options else [page_name],
-            }
-
-            async with session.post(
-                endpoint, json=payload, headers=headers
-            ) as response:
-                if response.status != 200:
-                    return [
-                        TextContent(
-                            type="text",
-                            text=f"❌ Failed to create page: HTTP {response.status}",
-                        )
-                    ]
-
-                result = await response.json()
-
-                # Check if the result indicates success
-                if result is None or result == "":
-                    return [
-                        TextContent(
-                            type="text",
-                            text="❌ Failed to create page: No response from Logseq API",
-                        )
-                    ]
-
-                # Build success response
-                output_lines = [
-                    "✅ **PAGE CREATED SUCCESSFULLY**",
-                    f"📄 Page Name: {page_name}",
-                    "",
-                ]
-
-                # Add page details if available
-                if isinstance(result, dict):
-                    page_id = result.get("id", "N/A")
-                    page_uuid = result.get("uuid", "N/A")
-                    original_name = result.get("originalName", page_name)
-                    is_journal = result.get("journal?", False)
-                    page_format = result.get("format", "markdown")
-
-                    output_lines.extend(
-                        [
-                            "📊 **PAGE DETAILS:**",
-                            f"• ID: {page_id}",
-                            f"• UUID: {page_uuid}",
-                            f"• Original Name: {original_name}",
-                            f"• Format: {page_format}",
-                            f"• Journal Page: {'Yes' if is_journal else 'No'}",
-                            "",
-                        ]
-                    )
-
-                    # Add properties if available
-                    page_properties = result.get("properties", {})
-                    if page_properties:
-                        output_lines.extend(
-                            [
-                                "⚙️ **PAGE PROPERTIES:**",
-                                *[
-                                    f"• {prop_name}: {prop_value}"
-                                    for prop_name, prop_value in page_properties.items()
-                                ],
-                                "",
-                            ]
-                        )
-
-                # Add creation info
-                if properties:
-                    output_lines.append(f"⚙️ Properties set: {len(properties)} items")
-                if format:
-                    output_lines.append(f"📝 Format: {format}")
-
-                output_lines.extend(
-                    [
-                        "",
-                        "🔗 **NEXT STEPS:**",
-                        "• Check your Logseq graph to see the new page",
-                        "• Use get_all_pages to verify the page was created",
-                        "• Use append_block_in_page to add content to the page",
-                        "• Use get_page_blocks to view the page structure",
-                    ]
-                )
-
-                return [TextContent(type="text", text="\n".join(output_lines))]
-
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error creating page: {str(e)}")]
+    cfg = load_config()
+    return await _run(LogseqClient(cfg), cfg, page_name, properties, format, content)

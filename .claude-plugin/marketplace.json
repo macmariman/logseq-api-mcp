@@ -1,0 +1,191 @@
+{
+  "name": "logseq-api-mcp",
+  "displayName": "Logseq API MCP Server",
+  "slug": "logseq-api-mcp",
+  "version": "0.2.0",
+  "shortDescription": "Your AI assistant starts every session blind to your Logseq knowledge graph. This plugin gives it 22 tools to read, write, query, and search your notes.",
+  "longDescription": "logseq-api-mcp bridges Claude and your Logseq knowledge base through the Model Context Protocol. It ships 22 standard tools covering every read and write operation you need — from listing pages and querying blocks to creating content, renaming pages, and executing raw Datalog queries. Tools auto-register through a dynamic discovery system: drop a .py file into src/tools/ and it appears in Claude without any imports or configuration changes.\n\nDB-mode support covers both the classic markdown-file graph format and Logseq's newer SQLite database format, including structured property upserts and UUID-reference resolution. A privacy layer lets you tag sensitive pages so they vanish from every read operation at query time. An optional vector search module adds semantic block search via LanceDB, built by running logseq-sync against your graph directory.",
+  "category": "productivity",
+  "subcategory": "knowledge-management",
+  "tags": [
+    "logseq",
+    "knowledge-graph",
+    "pkm",
+    "notes",
+    "zettelkasten",
+    "second-brain",
+    "mcp",
+    "mcp-server",
+    "flashcards",
+    "vector-search",
+    "datalog",
+    "markdown"
+  ],
+  "author": {
+    "name": "gustavo-meilus",
+    "url": "https://github.com/gustavo-meilus",
+    "avatar": "https://github.com/gustavo-meilus.png"
+  },
+  "repository": "https://github.com/gustavo-meilus/logseq-api-mcp",
+  "homepage": "https://github.com/gustavo-meilus/logseq-api-mcp",
+  "license": "MIT",
+  "icon": "assets/icon.png",
+  "screenshots": [
+    {
+      "url": "assets/architecture-light.svg",
+      "alt": "Architecture: AI Client → logseq-api-mcp → Logseq API → Knowledge Graph",
+      "caption": "System architecture — 22 tools, privacy filter, optional vector search"
+    }
+  ],
+  "stats": {
+    "toolCount": 22,
+    "optionalToolCount": 2,
+    "testCount": 345,
+    "coveragePercent": 87
+  },
+  "features": [
+    {
+      "icon": "📚",
+      "title": "22 Standard Tools",
+      "description": "12 read tools (pages, blocks, backlinks, search, query, namespaces, flashcards) and 10 write tools (create, delete, rename, update, append, insert, edit)."
+    },
+    {
+      "icon": "⚡",
+      "title": "Dynamic Tool Discovery",
+      "description": "Drop a .py file into src/tools/ and it registers automatically. No imports, no config changes, no restart required."
+    },
+    {
+      "icon": "🗄️",
+      "title": "DB-Mode Support",
+      "description": "Works with both the classic markdown-file graph and Logseq's newer SQLite database format, including structured property upserts via set_block_properties."
+    },
+    {
+      "icon": "🔒",
+      "title": "Privacy Filter",
+      "description": "Set LOGSEQ_EXCLUDE_TAGS to a comma-separated list of tags. Pages carrying any of those tags vanish from all read operations at query time."
+    },
+    {
+      "icon": "🔍",
+      "title": "Vector Search (Optional)",
+      "description": "Semantic similarity search over your full graph using LanceDB. Sync with logseq-sync --once, watch with logseq-sync daemon."
+    },
+    {
+      "icon": "📊",
+      "title": "Datalog Queries",
+      "description": "Execute raw Datalog / DSL queries directly against the graph through the query tool. Full power of Logseq's query engine exposed to Claude."
+    },
+    {
+      "icon": "🎓",
+      "title": "Flashcard Extraction",
+      "description": "get_linked_flashcards recursively collects Q&A flashcard pairs from a page and all pages linking to it — ready for spaced repetition integrations."
+    },
+    {
+      "icon": "🔐",
+      "title": "SSL Control",
+      "description": "Set LOGSEQ_VERIFY_SSL=false for local or self-signed certificate setups. Safe default is verification on."
+    }
+  ],
+  "useCases": [
+    {
+      "title": "Knowledge base exploration",
+      "description": "Ask Claude to find all pages in a namespace, list pages by property, or search for a topic across your entire graph.",
+      "example": "List all pages under the 'Projects' namespace and show their properties."
+    },
+    {
+      "title": "Content creation",
+      "description": "Create new pages, append structured blocks, and insert nested content without leaving your AI conversation.",
+      "example": "Create a meeting notes page for today with action items from this conversation."
+    },
+    {
+      "title": "Study and review",
+      "description": "Extract flashcards from any topic page and all linked pages for spaced repetition review.",
+      "example": "Get all flashcards from my 'Domain Driven Design' notes including linked pages."
+    },
+    {
+      "title": "Graph analysis",
+      "description": "Run Datalog queries to find patterns, relationships, and gaps across your knowledge base.",
+      "example": "Find all pages tagged as 'book' that don't have a 'status' property set."
+    },
+    {
+      "title": "Semantic search",
+      "description": "With the vector extra installed, search by meaning rather than exact keywords.",
+      "example": "Find notes conceptually related to 'the curse of knowledge' without using those exact words."
+    }
+  ],
+  "requirements": {
+    "runtime": [
+      {
+        "name": "Python",
+        "version": ">=3.11",
+        "url": "https://www.python.org/"
+      },
+      {
+        "name": "uv",
+        "description": "Fast Python package manager",
+        "url": "https://docs.astral.sh/uv/",
+        "installCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+      },
+      {
+        "name": "Logseq",
+        "description": "Running instance with HTTP API enabled",
+        "url": "https://logseq.com/"
+      }
+    ],
+    "optional": [
+      {
+        "name": "lancedb",
+        "description": "Required for vector search tools",
+        "installCommand": "uv sync --group vector"
+      }
+    ]
+  },
+  "installation": {
+    "steps": [
+      {
+        "step": 1,
+        "title": "Clone and install",
+        "code": "git clone https://github.com/gustavo-meilus/logseq-api-mcp.git\ncd logseq-api-mcp\nuv sync"
+      },
+      {
+        "step": 2,
+        "title": "Get your Logseq API token",
+        "description": "Open Logseq → Settings → Features → Developer mode → Enable HTTP APIs server → Copy the token."
+      },
+      {
+        "step": 3,
+        "title": "Add to Claude Desktop",
+        "code": "{\n  \"mcpServers\": {\n    \"logseq-api\": {\n      \"command\": \"uv\",\n      \"args\": [\"run\", \"--directory\", \"/path/to/logseq-api-mcp\", \"python\", \"src/server.py\"],\n      \"env\": {\n        \"LOGSEQ_API_ENDPOINT\": \"http://127.0.0.1:12315/api\",\n        \"LOGSEQ_API_TOKEN\": \"your_token_here\"\n      }\n    }\n  }\n}"
+      }
+    ],
+    "verification": "Ask Claude: 'List all my Logseq pages.' Your knowledge graph pages should appear immediately."
+  },
+  "changelog": [
+    {
+      "version": "0.2.0",
+      "date": "2025-05-19",
+      "changes": [
+        "Added 13 new tools: delete_block, delete_page, update_block, update_page, insert_nested_block, rename_page, set_block_properties, search, query, find_pages_by_property, get_pages_from_namespace, get_page_backlinks, get_pages_tree_from_namespace",
+        "Added DB-mode support for Logseq SQLite graphs",
+        "Added privacy filter via LOGSEQ_EXCLUDE_TAGS",
+        "Added optional vector search via LanceDB and logseq-sync CLI",
+        "Added structured logging with rotating file handler",
+        "Added SSL verification control",
+        "Raised test count to 345 with 87% coverage",
+        "Added dark/light mode SVG architecture diagram"
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "date": "2025-01-01",
+      "changes": [
+        "Initial release with 9 core tools",
+        "Dynamic tool discovery system",
+        "FastMCP server integration"
+      ]
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/gustavo-meilus/logseq-api-mcp/issues",
+    "discussions": "https://github.com/gustavo-meilus/logseq-api-mcp/discussions"
+  }
+}

@@ -11,7 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        include:
+          - python-version: "3.11"
+            extras: ""
+          - python-version: "3.12"
+            extras: "vector"
+          - python-version: "3.13"
+            extras: ""
 
     steps:
       - uses: actions/checkout@v4
@@ -25,44 +31,44 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --group test
+        run: |
+          if [ -n "${{ matrix.extras }}" ]; then
+            uv sync --group test --group ${{ matrix.extras }}
+          else
+            uv sync --group test
+          fi
 
       - name: Run ruff check
-        run: uv run ruff check
+        run: uv run ruff check src/ tests/
 
       - name: Run ruff format check
-        run: uv run ruff format --check
+        run: uv run ruff format --check src/ tests/
 
       - name: Run all tests with coverage
-        run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+        run: uv run pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=85
 
-      - name: Test MCP server health and tools
-        run: uv run pytest tests/test_mcp_server.py -v
-
-      - name: Validate tool discovery
+      - name: Validate tool discovery (≥21 standard tools)
         run: |
           uv run python -c "
-          import sys
-          sys.path.insert(0, 'src')
-          import tools
-          print(f'✅ Discovered {len(tools.__all__)} tools: {tools.__all__}')
+          from src import tools
 
-          expected_tools = [
-              'append_block_in_page',
-              'create_page', 
-              'edit_block',
-              'get_all_pages',
-              'get_page_blocks',
-              'get_block_content',
-              'get_all_page_content',
-              'get_page_links',
-              'get_linked_flashcards'
+          print(f'Discovered {len(tools.__all__)} tools: {sorted(tools.__all__)}')
+
+          expected = [
+              'append_block_in_page', 'create_page', 'delete_block', 'delete_page',
+              'edit_block', 'find_pages_by_property', 'get_all_page_content',
+              'get_all_pages', 'get_block_content', 'get_linked_flashcards',
+              'get_page_backlinks', 'get_page_blocks', 'get_page_links',
+              'get_pages_from_namespace', 'get_pages_tree_from_namespace',
+              'insert_nested_block', 'query', 'rename_page', 'search',
+              'set_block_properties', 'update_block', 'update_page',
           ]
 
-          for tool in expected_tools:
+          for tool in expected:
               assert tool in tools.__all__, f'Missing expected tool: {tool}'
 
-          print('✅ All expected tools are discovered')
+          assert len(tools.__all__) >= 21, f'Expected ≥21 tools, found {len(tools.__all__)}'
+          print('✅ All 22 standard tools discovered')
           "
 
       - name: Upload coverage reports
@@ -100,10 +106,9 @@ jobs:
         run: |
           uv run pip install dist/*.whl
           uv run python -c "
-          import sys
-          sys.path.insert(0, 'src')
-          import tools
+          from src import tools
           print(f'✅ Package installation successful: {len(tools.__all__)} tools available')
+          assert len(tools.__all__) >= 21
           "
 
   ci-summary:

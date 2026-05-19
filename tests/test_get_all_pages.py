@@ -1,104 +1,113 @@
 """Tests for get_all_pages tool."""
 
-from unittest.mock import AsyncMock, MagicMock
+from src.client.config import LogseqConfig
+from tests.conftest import FakeLogseqClient
+from src.tools.get_all_pages import _run
 
-import pytest
 
-from src.tools.get_all_pages import get_all_pages
+def _page(name: str, journal: bool = False, tags: list | None = None) -> dict:
+    props = {"tags": tags} if tags else {}
+    return {
+        "id": hash(name),
+        "uuid": f"uuid-{name}",
+        "originalName": name,
+        "name": name,
+        "journal?": journal,
+        "createdAt": 0,
+        "updatedAt": 0,
+        "properties": props,
+    }
 
 
 class TestGetAllPages:
-    """Test cases for get_all_pages function."""
+    """Test cases for get_all_pages._run()."""
 
-    @pytest.mark.asyncio
-    async def test_get_all_pages_success(
-        self, mock_env_vars, mock_aiohttp_session, sample_page_data
-    ):
-        """Test successful pages retrieval."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=[sample_page_data])
-
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
-
-        result = await get_all_pages()
-
-        assert len(result) == 1
+    async def test_success_shows_listing_header(self):
+        client = FakeLogseqClient({"get_all_pages": [_page("Test Page")]})
+        result = await _run(client, LogseqConfig("http://x", "t"))
         assert "📊 **LOGSEQ PAGES LISTING**" in result[0].text
         assert "Test Page" in result[0].text
 
-    @pytest.mark.asyncio
-    async def test_get_all_pages_with_limits(
-        self, mock_env_vars, mock_aiohttp_session, sample_page_data
-    ):
-        """Test pages retrieval with start/end limits."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=[sample_page_data])
+    async def test_with_start_end_limits(self):
+        pages = [_page(f"Page {i}") for i in range(10)]
+        client = FakeLogseqClient({"get_all_pages": pages})
+        result = await _run(client, LogseqConfig("http://x", "t"), start=0, end=3)
+        assert "showing indices 0-3" in result[0].text
 
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
+    async def test_empty_returns_no_pages_message(self):
+        client = FakeLogseqClient({"get_all_pages": []})
+        result = await _run(client, LogseqConfig("http://x", "t"))
+        assert "No pages found in Logseq graph" in result[0].text
+
+    async def test_separates_journals_from_regular(self):
+        pages = [_page("Regular"), _page("2024-01-01", journal=True)]
+        client = FakeLogseqClient({"get_all_pages": pages})
+        result = await _run(client, LogseqConfig("http://x", "t"))
+        assert "REGULAR PAGES" in result[0].text
+        assert "JOURNAL PAGES" in result[0].text
+
+    # ── include_journals ──────────────────────────────────────────────────────
+
+    async def test_include_journals_false_hides_journals(self):
+        pages = [_page("Regular"), _page("2024-01-01", journal=True)]
+        client = FakeLogseqClient({"get_all_pages": pages})
+        result = await _run(
+            client, LogseqConfig("http://x", "t"), include_journals=False
         )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+        assert "JOURNAL PAGES" not in result[0].text
+        assert "2024-01-01" not in result[0].text
 
-        result = await get_all_pages(start=0, end=1)
-
-        assert len(result) == 1
-        assert "showing indices 0-1" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_get_all_pages_empty(self, mock_env_vars, mock_aiohttp_session):
-        """Test pages retrieval with empty result."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=[])
-
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
+    async def test_include_journals_true_shows_journals(self):
+        pages = [_page("Regular"), _page("2024-01-01", journal=True)]
+        client = FakeLogseqClient({"get_all_pages": pages})
+        result = await _run(
+            client, LogseqConfig("http://x", "t"), include_journals=True
         )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+        assert "2024-01-01" in result[0].text
 
-        result = await get_all_pages()
+    async def test_include_journals_default_shows_journals(self):
+        """Default is True — journals shown by default."""
+        pages = [_page("Regular"), _page("2024-01-01", journal=True)]
+        client = FakeLogseqClient({"get_all_pages": pages})
+        result = await _run(client, LogseqConfig("http://x", "t"))
+        assert "JOURNAL PAGES" in result[0].text
 
-        assert len(result) == 1
-        assert "✅ No pages found in Logseq graph" in result[0].text
+    # ── exclude_tags ──────────────────────────────────────────────────────────
 
-    @pytest.mark.asyncio
-    async def test_get_all_pages_http_error(self, mock_env_vars, mock_aiohttp_session):
-        """Test pages retrieval with HTTP error."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 500
+    async def test_exclude_tags_hides_tagged_pages(self):
+        pages = [_page("Public"), _page("Secret", tags=["private"])]
+        cfg = LogseqConfig("http://x", "t", exclude_tags=("private",))
+        client = FakeLogseqClient({"get_all_pages": pages})
+        result = await _run(client, cfg)
+        assert "Public" in result[0].text
+        assert "Secret" not in result[0].text
 
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+    async def test_exclude_tags_empty_shows_all(self):
+        pages = [_page("Public"), _page("Secret", tags=["private"])]
+        cfg = LogseqConfig("http://x", "t", exclude_tags=())
+        client = FakeLogseqClient({"get_all_pages": pages})
+        result = await _run(client, cfg)
+        assert "Secret" in result[0].text
 
-        result = await get_all_pages()
+    async def test_exclude_tags_multiple_tags(self):
+        pages = [
+            _page("PageAlpha"),
+            _page("PageBeta", tags=["private"]),
+            _page("PageGamma", tags=["secret"]),
+        ]
+        cfg = LogseqConfig("http://x", "t", exclude_tags=("private", "secret"))
+        client = FakeLogseqClient({"get_all_pages": pages})
+        result = await _run(client, cfg)
+        assert "PageAlpha" in result[0].text
+        assert "PageBeta" not in result[0].text
+        assert "PageGamma" not in result[0].text
 
-        assert len(result) == 1
-        assert "❌ Failed to fetch pages: HTTP 500" in result[0].text
+    # ── error handling ────────────────────────────────────────────────────────
 
-    @pytest.mark.asyncio
-    async def test_get_all_pages_exception(self, mock_env_vars, mock_aiohttp_session):
-        """Test pages retrieval with exception."""
-        # Setup session mock to raise exception
-        mock_aiohttp_session._session_instance.post.side_effect = Exception(
-            "Network error"
-        )
+    async def test_exception_returns_error_message(self):
+        class ErrorClient(FakeLogseqClient):
+            async def get_all_pages(self):
+                raise RuntimeError("Network error")
 
-        result = await get_all_pages()
-
-        assert len(result) == 1
+        result = await _run(ErrorClient(), LogseqConfig("http://x", "t"))
         assert "❌ Error fetching pages: Network error" in result[0].text

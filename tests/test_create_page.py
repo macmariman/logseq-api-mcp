@@ -1,105 +1,110 @@
 """Tests for create_page tool."""
 
-from unittest.mock import AsyncMock, MagicMock
+from src.client.config import LogseqConfig
+from tests.conftest import FakeLogseqClient
+from src.tools.create_page import _run
 
-import pytest
-
-from src.tools.create_page import create_page
+_cfg = LogseqConfig("http://x", "t")
+_page_result = {
+    "id": 1,
+    "uuid": "new-uuid",
+    "originalName": "New Page",
+    "format": "markdown",
+    "journal?": False,
+}
 
 
 class TestCreatePage:
-    """Test cases for create_page function."""
+    # ── basic behaviour ───────────────────────────────────────────────────────
 
-    @pytest.mark.asyncio
-    async def test_create_page_success_basic(self, mock_env_vars, mock_aiohttp_session):
-        """Test successful page creation with basic parameters."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"success": True})
+    async def test_success_message(self):
+        client = FakeLogseqClient({"create_page": _page_result})
+        result = await _run(client, _cfg, "New Page")
+        assert "PAGE CREATED SUCCESSFULLY" in result[0].text
+        assert "New Page" in result[0].text
 
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
+    async def test_shows_page_uuid(self):
+        page_result = {
+            "id": 1,
+            "uuid": "abc-123",
+            "originalName": "My Page",
+            "format": "markdown",
+            "journal?": False,
+        }
+        client = FakeLogseqClient({"create_page": page_result})
+        result = await _run(client, _cfg, "My Page")
+        assert "abc-123" in result[0].text
+
+    async def test_no_response_returns_error(self):
+        client = FakeLogseqClient({"create_page": None})
+        result = await _run(client, _cfg, "My Page")
+        assert "No response from Logseq API" in result[0].text
+
+    async def test_properties_count_shown(self):
+        client = FakeLogseqClient({"create_page": _page_result})
+        result = await _run(
+            client, _cfg, "P", properties={"status": "active", "priority": "high"}
         )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+        assert "Properties set: 2 items" in result[0].text
 
-        result = await create_page("Test Page")
+    async def test_exception_returns_error(self):
+        class ErrorClient(FakeLogseqClient):
+            async def create_page(self, title, properties=None, fmt=None):
+                raise RuntimeError("API unavailable")
 
-        assert len(result) == 1
-        assert "✅ **PAGE CREATED SUCCESSFULLY**" in result[0].text
-        assert "Test Page" in result[0].text
+        result = await _run(ErrorClient(), _cfg, "My Page")
+        assert "❌ Error creating page: API unavailable" in result[0].text
 
-    @pytest.mark.asyncio
-    async def test_create_page_with_properties(
-        self, mock_env_vars, mock_aiohttp_session
-    ):
-        """Test page creation with properties."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"success": True})
+    # ── content parameter ─────────────────────────────────────────────────────
 
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
+    async def test_content_triggers_insert_batch_block(self):
+        """When content is provided, blocks are inserted via insert_batch_block."""
+        client = FakeLogseqClient(
+            {
+                "create_page": _page_result,
+                "insert_batch_block": [],
+            }
         )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+        await _run(client, _cfg, "New Page", content="- Item one\n- Item two")
+        assert any(c[0] == "insert_batch_block" for c in client.calls)
 
-        properties = {"status": "active", "type": "note"}
-        result = await create_page("Test Page", properties=properties)
+    async def test_content_none_skips_insert_batch_block(self):
+        """No content → no insert_batch_block call."""
+        client = FakeLogseqClient({"create_page": _page_result})
+        await _run(client, _cfg, "New Page", content=None)
+        assert not any(c[0] == "insert_batch_block" for c in client.calls)
 
-        assert len(result) == 1
-        assert "✅ **PAGE CREATED SUCCESSFULLY**" in result[0].text
-        assert "⚙️ Properties set: 2 items" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_create_page_with_format(self, mock_env_vars, mock_aiohttp_session):
-        """Test page creation with format."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"success": True})
-
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
+    async def test_content_blocks_counted_in_output(self):
+        """Result text mentions blocks inserted."""
+        client = FakeLogseqClient(
+            {
+                "create_page": _page_result,
+                "insert_batch_block": [],
+            }
         )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+        result = await _run(client, _cfg, "New Page", content="- Item one\n- Item two")
+        assert "block" in result[0].text.lower()
 
-        result = await create_page("Test Page", format="markdown")
+    async def test_frontmatter_merged_with_properties(self):
+        """Frontmatter props from content are merged with explicit properties."""
+        md = "---\nstatus: active\n---\n- block content"
+        create_call_args = {}
 
-        assert len(result) == 1
-        assert "✅ **PAGE CREATED SUCCESSFULLY**" in result[0].text
-        assert "Format: markdown" in result[0].text
+        class CapturingClient(FakeLogseqClient):
+            async def create_page(self, title, properties=None, fmt=None):
+                create_call_args["properties"] = properties
+                return _page_result
 
-    @pytest.mark.asyncio
-    async def test_create_page_http_error(self, mock_env_vars, mock_aiohttp_session):
-        """Test page creation with HTTP error."""
-        # Setup mock response
-        mock_response = MagicMock()
-        mock_response.status = 500
-
-        # Setup session mock
-        mock_aiohttp_session._post_context.__aenter__ = AsyncMock(
-            return_value=mock_response
+        capturing = CapturingClient({"insert_batch_block": []})
+        await _run(
+            capturing, _cfg, "New Page", content=md, properties={"priority": "high"}
         )
-        mock_aiohttp_session._post_context.__aexit__ = AsyncMock(return_value=None)
+        props = create_call_args.get("properties", {})
+        assert props.get("status") == "active"
+        assert props.get("priority") == "high"
 
-        result = await create_page("Test Page")
-
-        assert len(result) == 1
-        assert "❌ Failed to create page: HTTP 500" in result[0].text
-
-    @pytest.mark.asyncio
-    async def test_create_page_exception(self, mock_env_vars, mock_aiohttp_session):
-        """Test page creation with exception."""
-        # Setup session mock to raise exception
-        mock_aiohttp_session._session_instance.post.side_effect = Exception(
-            "Network error"
-        )
-
-        result = await create_page("Test Page")
-
-        assert len(result) == 1
-        assert "❌ Error creating page: Network error" in result[0].text
+    async def test_empty_content_skips_insert_batch_block(self):
+        """Empty/whitespace content → no insert_batch_block call."""
+        client = FakeLogseqClient({"create_page": _page_result})
+        await _run(client, _cfg, "New Page", content="   \n  ")
+        assert not any(c[0] == "insert_batch_block" for c in client.calls)
