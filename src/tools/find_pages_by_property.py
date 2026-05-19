@@ -5,7 +5,7 @@ from typing import List, Optional
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.privacy.exclude_tags import filter_pages
 from src.logging_setup import get_logger
 
@@ -15,21 +15,21 @@ _VALID_PROP_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
 _log = get_logger(__name__)
 
 
-async def _run(
+async def find_pages_by_property(
     client: LogseqClient,
     config: LogseqConfig,
     property_name: str,
     property_value: Optional[str] = None,
     limit: int = 100,
 ) -> List[TextContent]:
-    """Find pages by property using an injected client.
+    """Find Logseq pages that have a specific property set.
 
     Args:
-        client: LogseqClient instance.
-        config: LogseqConfig (reserved for future use).
-        property_name: Property key to search for (alphanumeric/dash/underscore only).
-        property_value: Optional exact value to match.
-        limit: Maximum number of results to return.
+        client: LogseqClient instance (injected by the registry).
+        config: LogseqConfig (provides exclude_tags).
+        property_name: Property key to search for (alphanumeric, hyphens, underscores).
+        property_value: Optional exact value to match; omit to find all pages with the property.
+        limit: Maximum number of results to return (default 100).
 
     Returns:
         List with one TextContent containing matching pages.
@@ -98,24 +98,3 @@ async def _run(
         return [
             TextContent(type="text", text=f"❌ Error finding pages by property: {exc}")
         ]
-
-
-async def find_pages_by_property(
-    property_name: str,
-    property_value: Optional[str] = None,
-    limit: int = 100,
-) -> List[TextContent]:
-    """Find Logseq pages that have a specific property set.
-
-    Args:
-        property_name: Property key to search for (alphanumeric, hyphens, underscores).
-        property_value: Optional exact value to match; omit to find all pages with the property.
-        limit: Maximum number of results to return (default 100).
-
-    Returns:
-        List with one TextContent containing matching pages.
-
-    Complexity: O(N) where N is result count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, property_name, property_value, limit)

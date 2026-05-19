@@ -41,7 +41,7 @@ class TestGetAllPagesExclusion:
 
 class TestSearchExclusion:
     async def test_excluded_page_absent_from_search_results(self):
-        from src.tools.search import _run
+        from src.tools.search import search as _run
 
         search_result = {
             "blocks": [],
@@ -61,7 +61,7 @@ class TestSearchExclusion:
 
 class TestQueryExclusion:
     async def test_excluded_page_absent_from_query_results(self):
-        from src.tools.query import _run
+        from src.tools.query import query as _run
 
         items = [
             {
@@ -90,7 +90,7 @@ class TestQueryExclusion:
 
 class TestFindPagesByPropertyExclusion:
     async def test_excluded_page_absent_from_property_results(self):
-        from src.tools.find_pages_by_property import _run
+        from src.tools.find_pages_by_property import find_pages_by_property as _run
 
         items = [
             {"originalName": "Secret Page", "name": "secret page", "uuid": "p1"},

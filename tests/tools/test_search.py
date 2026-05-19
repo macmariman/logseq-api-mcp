@@ -2,7 +2,7 @@
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
-from src.tools.search import _run
+from src.tools.search import search as _run
 
 _cfg = LogseqConfig("http://x", "t")
 _cfg_db = LogseqConfig("http://x", "t", db_mode=True)

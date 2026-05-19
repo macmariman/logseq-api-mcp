@@ -125,7 +125,7 @@ class TestGetBlockContentDbMode:
 
 class TestSearchDbMode:
     async def test_db_mode_result_contains_db_page_format(self):
-        from src.tools.search import _run
+        from src.tools.search import search as _run
 
         db_result = {
             "blocks": [
@@ -138,7 +138,7 @@ class TestSearchDbMode:
         assert "DB Page Result" in result[0].text
 
     async def test_markdown_mode_result_uses_block_content_key(self):
-        from src.tools.search import _run
+        from src.tools.search import search as _run
 
         md_result = {
             "blocks": [

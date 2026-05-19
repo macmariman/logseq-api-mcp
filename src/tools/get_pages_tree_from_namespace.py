@@ -4,7 +4,7 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.tools.formatters.pages import format_namespace_tree
 from src.logging_setup import get_logger
 
@@ -12,17 +12,17 @@ from src.logging_setup import get_logger
 _log = get_logger(__name__)
 
 
-async def _run(
+async def get_pages_tree_from_namespace(
     client: LogseqClient,
     config: LogseqConfig,
     namespace: str,
 ) -> List[TextContent]:
-    """Fetch and tree-format a namespace hierarchy using an injected client.
+    """Get pages under a Logseq namespace displayed as an ASCII tree.
 
     Args:
-        client: LogseqClient instance.
+        client: LogseqClient instance (injected by the registry).
         config: LogseqConfig (reserved for future use).
-        namespace: The namespace prefix to display as a tree.
+        namespace: The namespace prefix to display (e.g. "Project").
 
     Returns:
         List with one TextContent containing the ASCII tree.
@@ -51,18 +51,3 @@ async def _run(
         return [
             TextContent(type="text", text=f"❌ Error fetching namespace tree: {exc}")
         ]
-
-
-async def get_pages_tree_from_namespace(namespace: str) -> List[TextContent]:
-    """Get pages under a Logseq namespace displayed as an ASCII tree.
-
-    Args:
-        namespace: The namespace prefix to display (e.g. "Project").
-
-    Returns:
-        List with one TextContent containing the ASCII tree.
-
-    Complexity: O(N) where N is total node count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, namespace)

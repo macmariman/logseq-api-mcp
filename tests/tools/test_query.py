@@ -2,7 +2,7 @@
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
-from src.tools.query import _run
+from src.tools.query import query as _run
 
 _cfg = LogseqConfig("http://x", "t")
 _cfg_excl = LogseqConfig("http://x", "t", exclude_tags=("private",))
