@@ -4,11 +4,18 @@ Verifies that each tool correctly routes through its DB-mode code path
 when config.db_mode=True.
 """
 
+import pytest
+
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
 
 _cfg_db = LogseqConfig("http://x", "t", db_mode=True)
 _cfg = LogseqConfig("http://x", "t", db_mode=False)
+
+
+@pytest.fixture
+def config_db_mode():
+    return LogseqConfig(endpoint="http://x/api", token="t", db_mode=True)
 
 
 # ── get_all_page_content: uuid resolution ─────────────────────────────────────
@@ -77,6 +84,28 @@ class TestGetAllPageContentDbMode:
         client = FakeLogseqClient({"get_page": page, "get_page_blocks_tree": []})
         await _run(client, _cfg, "P", resolve_refs=True)
         assert not any(c[0] == "resolve_page_uuids" for c in client.calls)
+
+    async def test_get_all_page_content_resolves_uuid_via_get_page_first(
+        self, fake_client, config_db_mode
+    ):
+        fake_client.responses["get_page"] = {
+            "originalName": "Real Page",
+            "uuid": "u-123",
+        }
+        fake_client.responses["get_page_blocks_tree"] = [{"content": "hi", "uuid": "b"}]
+
+        from src.tools.get_all_page_content import get_all_page_content
+
+        await get_all_page_content(
+            fake_client,
+            config_db_mode,
+            page_identifier="0123abcd-1234-5678-9abc-0123456789ab",
+        )
+
+        methods = [c[0] for c in fake_client.calls]
+        assert methods.index("get_page") < methods.index("get_page_blocks_tree")
+        tree_call = next(c for c in fake_client.calls if c[0] == "get_page_blocks_tree")
+        assert tree_call[1][0] == "Real Page"
 
 
 # ── get_block_content: db properties ─────────────────────────────────────────
