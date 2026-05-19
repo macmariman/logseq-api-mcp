@@ -101,6 +101,21 @@ class TestParseContent:
         # Should not raise; may return empty or partial properties
         assert isinstance(result.properties, dict)
 
+    def test_frontmatter_tags_list_round_trips(self):
+        md = "---\ntags: [a, b]\n---\nbody"
+        result = parse_content(md)
+        assert result.properties["tags"] == ["a", "b"]
+
+    def test_frontmatter_quoted_string_round_trips(self):
+        md = '---\ntitle: "hello: world"\n---\nbody'
+        result = parse_content(md)
+        assert result.properties["title"] == "hello: world"
+
+    def test_frontmatter_nested_mapping_round_trips(self):
+        md = "---\nmeta:\n  status: active\n  priority: high\n---\nbody"
+        result = parse_content(md)
+        assert result.properties["meta"] == {"status": "active", "priority": "high"}
+
     # ── Bullet lists ──────────────────────────────────────────────────────────
 
     def test_bullet_list_dash(self):
