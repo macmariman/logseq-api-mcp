@@ -54,7 +54,13 @@ class TestSearch:
             "pages-content": [],
             "files": [],
         }
-        client = FakeLogseqClient({"search": search_result, "get_all_pages": pages})
+        client = FakeLogseqClient(
+            {
+                "search": search_result,
+                "get_all_pages": pages,
+                "excluded_page_names": frozenset({"secret"}),
+            }
+        )
         result = await _run(client, _cfg_excl, "query")
         assert "Safe Page" in result[0].text
         assert "Secret" not in result[0].text

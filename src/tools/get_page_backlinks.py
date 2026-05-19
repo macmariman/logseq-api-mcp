@@ -5,7 +5,6 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
-from src.privacy.exclude_tags import filter_pages
 from src.tools.formatters.pages import format_timestamp
 from src.logging_setup import get_logger
 
@@ -93,18 +92,7 @@ async def get_page_backlinks(
                 )
             ]
 
-        all_pages = await client.get_all_pages()
-        visible_pages = (
-            filter_pages(all_pages, config.exclude_tags)
-            if config.exclude_tags
-            else all_pages
-        )
-        visible_ids = {
-            p.get("id") for p in visible_pages if isinstance(p, dict) and p.get("id")
-        }
-        page_lookup = {
-            p.get("id"): p for p in all_pages if isinstance(p, dict) and p.get("id")
-        }
+        excluded_names: frozenset[str] = await client.excluded_page_names()
 
         enriched: list[dict] = []
         for group in linked_refs:
@@ -113,13 +101,16 @@ async def get_page_backlinks(
             page_ref = group[0]
             if not isinstance(page_ref, dict):
                 continue
-            if config.exclude_tags and page_ref.get("id") not in visible_ids:
+            ref_name = (
+                page_ref.get("originalName") or page_ref.get("name") or ""
+            ).lower()
+            if excluded_names and ref_name in excluded_names:
                 continue
             ref_blocks = [b for b in group[1:] if isinstance(b, dict)]
             enriched.append(
                 {
                     "ref": page_ref,
-                    "full": page_lookup.get(page_ref.get("id")),
+                    "full": None,
                     "blocks": ref_blocks,
                 }
             )

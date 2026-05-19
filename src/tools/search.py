@@ -5,7 +5,6 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
-from src.privacy.exclude_tags import filter_pages
 from src.tools.formatters.search import (
     format_search_results_markdown_mode,
     format_search_results_db_mode,
@@ -45,13 +44,7 @@ async def search(
         _log.debug("%s called", __name__)
         result = await client.search(query)
 
-        excluded_page_names: frozenset[str] = frozenset()
-        if config.exclude_tags:
-            all_pages = await client.get_all_pages()
-            visible = filter_pages(all_pages, config.exclude_tags)
-            visible_names = {(p.get("name") or "").lower() for p in visible}
-            all_names = {(p.get("name") or "").lower() for p in all_pages}
-            excluded_page_names = frozenset(all_names - visible_names)
+        excluded_page_names: frozenset[str] = await client.excluded_page_names()
 
         if config.db_mode:
             text = format_search_results_db_mode(

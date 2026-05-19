@@ -6,7 +6,6 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
-from src.privacy.exclude_tags import filter_pages
 from src.logging_setup import get_logger
 
 _VALID_PROP_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
@@ -56,15 +55,13 @@ async def find_pages_by_property(
 
         items = await client.query_dsl(dsl_query)
 
-        if config.exclude_tags:
-            all_pages = await client.get_all_pages()
-            visible = filter_pages(all_pages, config.exclude_tags)
-            visible_names = {(p.get("name") or "").lower() for p in visible}
+        excluded_names: frozenset[str] = await client.excluded_page_names()
+        if excluded_names:
             items = [
                 it
                 for it in items
                 if (it.get("name") or it.get("originalName") or "").lower()
-                in visible_names
+                not in excluded_names
             ]
 
         items = items[:limit]

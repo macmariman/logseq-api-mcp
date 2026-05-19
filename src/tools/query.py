@@ -5,7 +5,6 @@ from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
-from src.privacy.exclude_tags import filter_pages
 from src.logging_setup import get_logger
 
 
@@ -46,14 +45,7 @@ async def query(
         _log.debug("%s called", __name__)
         items = await client.query_dsl(query)
 
-        excluded_names: set[str] = set()
-        if config.exclude_tags:
-            all_pages = await client.get_all_pages()
-            visible = filter_pages(all_pages, config.exclude_tags)
-            visible_names = {(p.get("name") or "").lower() for p in visible}
-            excluded_names = {
-                (p.get("name") or "").lower() for p in all_pages
-            } - visible_names
+        excluded_names: frozenset[str] = await client.excluded_page_names()
 
         def _page_name(item: dict) -> str:
             top = item.get("originalName") or item.get("name") or ""
