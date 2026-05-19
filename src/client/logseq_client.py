@@ -483,18 +483,20 @@ class LogseqClient:
         return result
 
     async def resolve_property_ident(self, property_name: str) -> str | None:
-        """Resolve a property display name to its internal DB ident.
+        """Resolve a property display name to its DB-mode :db/ident keyword.
 
-        Args:
-            property_name: Human-readable property name (e.g. 'status').
-
-        Returns:
-            Internal ident string, or None if not found.
-
-        Complexity: O(1).
+        @param property_name User-facing property name (e.g. "status").
+        @returns             ":db/ident" string (e.g. ":user.property/status") or None when unknown.
+        @complexity O(1) network call.
         """
-        query = f'[:find ?e :where [?e :db/ident ?i] [(= (name ?i) "{property_name}")]]'
+        safe = property_name.replace("\\", "\\\\").replace('"', '\\"')
+        query = (
+            f'[:find ?ident :where [?e :block/title "{safe}"] [?e :db/ident ?ident]]'
+        )
         rows = await self.datascript_query(query)
-        if rows and rows[0]:
-            return rows[0][0]
+        if not rows:
+            return None
+        first = rows[0]
+        if isinstance(first, list) and first:
+            return str(first[0])
         return None

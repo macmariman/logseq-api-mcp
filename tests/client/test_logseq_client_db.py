@@ -121,3 +121,33 @@ async def test_resolve_property_ident_uses_datascript_query(client, mock_call):
     call_args = mock_call.call_args
     assert call_args[0][0] == "logseq.DB.datascriptQuery"
     assert "status" in call_args[0][1][0]
+
+
+async def test_resolve_property_ident_query_binds_ident():
+    client = LogseqClient(LogseqConfig(endpoint="http://x/api", token="t"))
+    with patch.object(client, "datascript_query", new_callable=AsyncMock) as ds:
+        ds.return_value = [[":user.property/status"]]
+        result = await client.resolve_property_ident("status")
+        ds.assert_awaited_once()
+        query = ds.call_args.args[0]
+        assert ":find ?ident" in query
+        assert ":db/ident ?ident" in query
+        assert '"status"' in query
+        assert result == ":user.property/status"
+
+
+async def test_resolve_property_ident_escapes_backslash_and_quote():
+    client = LogseqClient(LogseqConfig(endpoint="http://x/api", token="t"))
+    with patch.object(client, "datascript_query", new_callable=AsyncMock) as ds:
+        ds.return_value = []
+        await client.resolve_property_ident('bad"name\\here')
+        query = ds.call_args.args[0]
+        assert '\\"' in query
+        assert "\\\\" in query
+
+
+async def test_resolve_property_ident_returns_none_on_empty():
+    client = LogseqClient(LogseqConfig(endpoint="http://x/api", token="t"))
+    with patch.object(client, "datascript_query", new_callable=AsyncMock) as ds:
+        ds.return_value = []
+        assert await client.resolve_property_ident("unknown") is None
