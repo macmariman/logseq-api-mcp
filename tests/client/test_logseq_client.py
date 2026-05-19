@@ -306,3 +306,27 @@ async def test_call_raises_connection_error_on_timeout():
         mock_sess_class.side_effect = asyncio.TimeoutError()
         with pytest.raises(LogseqConnectionError):
             await _client()._call("logseq.Editor.getAllPages")
+
+
+async def test_create_page_sends_properties_as_second_arg():
+    client = _client()
+    with patch.object(client, "_call", new_callable=AsyncMock) as mock_call:
+        mock_call.return_value = {"uuid": "u"}
+        await client.create_page(
+            "MyPage", properties={"status": "active"}, fmt="markdown"
+        )
+        mock_call.assert_awaited_once_with(
+            "logseq.Editor.createPage",
+            ["MyPage", {"status": "active"}, {"format": "markdown"}],
+        )
+
+
+async def test_create_page_omits_properties_when_none():
+    client = _client()
+    with patch.object(client, "_call", new_callable=AsyncMock) as mock_call:
+        mock_call.return_value = {"uuid": "u"}
+        await client.create_page("MyPage")
+        mock_call.assert_awaited_once_with(
+            "logseq.Editor.createPage",
+            ["MyPage", {}, {}],
+        )

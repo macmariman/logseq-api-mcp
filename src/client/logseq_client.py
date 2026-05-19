@@ -179,24 +179,22 @@ class LogseqClient:
         properties: dict | None = None,
         fmt: str | None = None,
     ) -> dict:
-        """Create a new page.
+        """Create a new Logseq page.
 
-        Args:
-            title: Page title.
-            properties: Optional page-level properties dict.
-            fmt: Optional format string ('markdown' or 'org').
-
-        Returns:
-            Created page dict.
-
-        Complexity: O(1).
+        @param title      Page title (used as PageIdentity).
+        @param properties Optional bare properties dict (NOT nested under opts).
+        @param fmt        Optional format string ('markdown' | 'org'); becomes opts.format.
+        @returns          Created PageEntity dict (or empty dict if API returns null).
+        @throws LogseqAPIError on backend failure.
+        @complexity O(1) network call.
         """
-        options: dict = {}
-        if properties:
-            options["properties"] = properties
+        opts: dict = {}
         if fmt:
-            options["format"] = fmt
-        result = await self._call("logseq.Editor.createPage", [title, options])
+            opts["format"] = fmt
+        result = await self._call(
+            "logseq.Editor.createPage",
+            [title, properties or {}, opts],
+        )
         return result or {}
 
     async def delete_page(self, page_name: str) -> None:
