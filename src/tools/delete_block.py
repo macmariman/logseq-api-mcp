@@ -4,19 +4,19 @@ from typing import List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
 
 _log = get_logger(__name__)
 
 
-async def _run(
+async def delete_block(
     client: LogseqClient,
     config: LogseqConfig,
     block_uuid: str,
 ) -> List[TextContent]:
-    """Delete a block using an injected client.
+    """Delete a block from Logseq by its UUID.
 
     Args:
         client: LogseqClient instance.
@@ -24,7 +24,7 @@ async def _run(
         block_uuid: UUID of the block to delete.
 
     Returns:
-        List with one TextContent describing the result.
+        List with one TextContent describing success or failure.
 
     Complexity: O(1).
     """
@@ -44,18 +44,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error deleting block: {exc}")]
-
-
-async def delete_block(block_uuid: str) -> List[TextContent]:
-    """Delete a block from Logseq by its UUID.
-
-    Args:
-        block_uuid: UUID of the block to delete.
-
-    Returns:
-        List with one TextContent describing success or failure.
-
-    Complexity: O(1).
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, block_uuid)

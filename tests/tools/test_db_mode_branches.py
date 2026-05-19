@@ -158,7 +158,7 @@ class TestSearchDbMode:
 
 class TestSetBlockPropertiesDbMode:
     async def test_db_mode_calls_resolve_property_ident_per_key(self):
-        from src.tools.set_block_properties import _run
+        from src.tools.set_block_properties import set_block_properties as _run
 
         block = {
             "id": 1,
@@ -178,7 +178,7 @@ class TestSetBlockPropertiesDbMode:
         assert any(c[0] == "resolve_property_ident" for c in client.calls)
 
     async def test_db_mode_uses_resolved_ident_when_found(self):
-        from src.tools.set_block_properties import _run
+        from src.tools.set_block_properties import set_block_properties as _run
 
         block = {
             "id": 1,
@@ -201,7 +201,7 @@ class TestSetBlockPropertiesDbMode:
         assert upsert_calls[0][1][1] == ":status"
 
     async def test_db_mode_falls_back_to_raw_name_when_ident_not_found(self):
-        from src.tools.set_block_properties import _run
+        from src.tools.set_block_properties import set_block_properties as _run
 
         block = {
             "id": 1,

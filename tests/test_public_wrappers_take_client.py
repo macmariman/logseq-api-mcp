@@ -23,6 +23,11 @@ _WRAPPERS_TO_AUDIT = [
     "delete_page",
     "rename_page",
     "append_block_in_page",
+    "insert_nested_block",
+    "update_block",
+    "delete_block",
+    "edit_block",
+    "set_block_properties",
 ]
 
 
@@ -33,3 +38,10 @@ def test_wrapper_first_two_params_are_client_and_config(name):
     params = list(sig.parameters.values())
     assert params[0].name == "client"
     assert params[1].name == "config"
+
+
+def test_audit_list_matches_tools_all_minus_alias():
+    from src import tools
+
+    expected = set(tools.__all__) - {"get_page_links"}
+    assert set(_WRAPPERS_TO_AUDIT) == expected

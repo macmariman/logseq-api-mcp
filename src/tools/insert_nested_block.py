@@ -4,14 +4,14 @@ from typing import Any, Dict, List, Optional
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
 
 _log = get_logger(__name__)
 
 
-async def _run(
+async def insert_nested_block(
     client: LogseqClient,
     config: LogseqConfig,
     parent_block_uuid: str,
@@ -19,18 +19,18 @@ async def _run(
     properties: Optional[Dict[str, Any]] = None,
     sibling: bool = False,
 ) -> List[TextContent]:
-    """Insert a block relative to a parent using an injected client.
+    """Insert a new block as a child or sibling of an existing block.
 
     Args:
         client: LogseqClient instance.
         config: LogseqConfig (reserved for future use).
-        parent_block_uuid: UUID of the parent (or reference) block.
+        parent_block_uuid: UUID of the reference block.
         content: Content string for the new block.
         properties: Optional properties dict for the new block.
         sibling: When True, insert as a sibling; when False (default), insert as a child.
 
     Returns:
-        List with one TextContent describing the result.
+        List with one TextContent describing success or failure.
 
     Complexity: O(1).
     """
@@ -68,28 +68,3 @@ async def _run(
     except Exception as exc:
         _log.error("exception in %s: %s", __name__, exc, exc_info=True)
         return [TextContent(type="text", text=f"❌ Error inserting block: {exc}")]
-
-
-async def insert_nested_block(
-    parent_block_uuid: str,
-    content: str,
-    properties: Optional[Dict[str, Any]] = None,
-    sibling: bool = False,
-) -> List[TextContent]:
-    """Insert a new block as a child or sibling of an existing block.
-
-    Args:
-        parent_block_uuid: UUID of the reference block.
-        content: Content string for the new block.
-        properties: Optional properties dict for the new block.
-        sibling: When True, insert as a sibling; when False (default), insert as a child.
-
-    Returns:
-        List with one TextContent describing success or failure.
-
-    Complexity: O(1).
-    """
-    cfg = load_config()
-    return await _run(
-        LogseqClient(cfg), cfg, parent_block_uuid, content, properties, sibling
-    )

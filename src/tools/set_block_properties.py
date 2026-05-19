@@ -4,20 +4,20 @@ from typing import Any, Dict, List
 from mcp.types import TextContent
 
 from src.client.logseq_client import LogseqClient
-from src.client.config import LogseqConfig, load_config
+from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
 
 
 _log = get_logger(__name__)
 
 
-async def _run(
+async def set_block_properties(
     client: LogseqClient,
     config: LogseqConfig,
     block_uuid: str,
     properties: Dict[str, Any],
 ) -> List[TextContent]:
-    """Set properties on a block via upsertBlockProperty (DB-mode only).
+    """Set one or more properties on a Logseq block (DB-mode only).
 
     Args:
         client: LogseqClient instance.
@@ -26,7 +26,7 @@ async def _run(
         properties: Dict of property key → value pairs to set.
 
     Returns:
-        List with one TextContent describing the result.
+        List with one TextContent describing success or failure.
 
     Complexity: O(P) where P is property count.
     """
@@ -66,22 +66,3 @@ async def _run(
         return [
             TextContent(type="text", text=f"❌ Error setting block properties: {exc}")
         ]
-
-
-async def set_block_properties(
-    block_uuid: str,
-    properties: Dict[str, Any],
-) -> List[TextContent]:
-    """Set one or more properties on a Logseq block (DB-mode only).
-
-    Args:
-        block_uuid: UUID of the block to update.
-        properties: Dict of property key → value pairs to set.
-
-    Returns:
-        List with one TextContent describing success or failure.
-
-    Complexity: O(P) where P is property count.
-    """
-    cfg = load_config()
-    return await _run(LogseqClient(cfg), cfg, block_uuid, properties)
