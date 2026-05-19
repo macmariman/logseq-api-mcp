@@ -2,6 +2,7 @@
 
 from src.client.config import LogseqConfig
 from tests.conftest import FakeLogseqClient
+from src.tools.update_page import update_page
 from src.tools.update_page import update_page as _run
 
 _cfg = LogseqConfig("http://x", "t")
@@ -23,14 +24,16 @@ class TestUpdatePage:
             {
                 "get_page": _page_result,
                 "get_page_blocks_tree": [_EXISTING_BLOCK],
-                "append_block_in_page": {"uuid": "new-uuid"},
+                "insert_batch_block": [],
             }
         )
         result = await _run(
             client, _cfg, "My Page", content="- New block", mode="append"
         )
         assert "UPDATE" in result[0].text.upper()
-        assert any(c[0] == "append_block_in_page" for c in client.calls)
+        assert any(c[0] == "insert_batch_block" for c in client.calls)
+        # Append mode must NOT clear existing blocks
+        assert not any(c[0] == "delete_block" for c in client.calls)
 
     async def test_update_page_replace_mode_clears_first(self):
         client = FakeLogseqClient(
@@ -90,3 +93,32 @@ class TestUpdatePage:
 
         result = await _run(ErrorClient(), _cfg, "My Page", content="- x")
         assert "❌ Error updating page" in result[0].text
+
+
+async def test_update_page_replace_uses_insert_batch_block_with_hierarchy(
+    fake_client, config
+):
+    fake_client.responses["get_page"] = {"uuid": "page-uuid", "originalName": "P"}
+    fake_client.responses["get_page_blocks_tree"] = [
+        {"uuid": "old-1"},
+        {"uuid": "old-2"},
+    ]
+    await update_page(
+        fake_client,
+        config,
+        page_name="P",
+        content="# H1\n  - child A\n  - child B",
+        mode="replace",
+    )
+
+    methods = [c[0] for c in fake_client.calls]
+    assert "delete_block" in methods
+    assert "insert_batch_block" in methods
+    # No per-block append_block_in_page calls
+    assert "append_block_in_page" not in methods
+
+    # insert_batch_block received nested children
+    batch_call = next(c for c in fake_client.calls if c[0] == "insert_batch_block")
+    blocks = batch_call[2]["blocks"]
+    assert blocks[0]["content"] == "# H1"
+    assert len(blocks[0].get("children", [])) == 2
