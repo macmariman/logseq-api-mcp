@@ -1,0 +1,228 @@
+{
+  "name": "logseq-api-mcp",
+  "displayName": "Logseq API MCP Server",
+  "version": "0.2.0",
+  "description": "Give your AI assistant 22 tools to read, write, query, and semantically search your Logseq knowledge graph — auto-registered from a single Python file drop with no configuration needed.",
+  "type": "mcp-server",
+  "transport": "stdio",
+  "author": {
+    "name": "gustavo-meilus",
+    "url": "https://github.com/gustavo-meilus"
+  },
+  "repository": "https://github.com/gustavo-meilus/logseq-api-mcp",
+  "homepage": "https://github.com/gustavo-meilus/logseq-api-mcp",
+  "license": "MIT",
+  "icon": "assets/icon.png",
+  "keywords": ["logseq", "mcp", "knowledge-graph", "notes", "pkm", "zettelkasten"],
+  "categories": ["productivity", "knowledge-management", "notes"],
+  "requires": {
+    "python": ">=3.11",
+    "tools": ["uv"]
+  },
+  "server": {
+    "command": "uv",
+    "args": ["run", "--directory", "{installDir}", "python", "src/server.py"],
+    "env": {
+      "LOGSEQ_API_ENDPOINT": {
+        "description": "Logseq HTTP API base URL",
+        "default": "http://127.0.0.1:12315/api",
+        "required": false
+      },
+      "LOGSEQ_API_TOKEN": {
+        "description": "Bearer auth token from Logseq Settings → Features → Developer mode",
+        "required": true,
+        "secret": true
+      },
+      "LOGSEQ_VERIFY_SSL": {
+        "description": "Set false to skip TLS certificate verification for local/self-signed setups",
+        "default": "true",
+        "required": false
+      },
+      "LOGSEQ_DB_MODE": {
+        "description": "Set true to enable Logseq database-format API paths (SQLite graphs)",
+        "default": "false",
+        "required": false
+      },
+      "LOGSEQ_EXCLUDE_TAGS": {
+        "description": "Comma-separated tags — pages tagged with any of these are hidden from all read operations",
+        "default": "",
+        "required": false
+      },
+      "LOGSEQ_LOG_LEVEL": {
+        "description": "Log level for the server process (DEBUG, INFO, WARNING, ERROR)",
+        "default": "WARNING",
+        "required": false
+      },
+      "LOGSEQ_VECTOR_ENABLED": {
+        "description": "Set true to activate vector_search and vector_db_status tools (requires [vector] extras)",
+        "default": "false",
+        "required": false
+      },
+      "LOGSEQ_VECTOR_PATH": {
+        "description": "LanceDB storage directory for vector search index",
+        "default": "~/.cache/logseq-api-mcp/vector_db",
+        "required": false
+      },
+      "LOGSEQ_GRAPH_PATH": {
+        "description": "Root directory of the Logseq markdown graph used by logseq-sync",
+        "default": "~/logseq",
+        "required": false
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "get_all_pages",
+      "description": "Get a listing of all pages in the Logseq graph with essential metadata.",
+      "category": "read"
+    },
+    {
+      "name": "get_page_blocks",
+      "description": "Get the tree structure of blocks that compose a page in Logseq.",
+      "category": "read"
+    },
+    {
+      "name": "get_page_links",
+      "description": "Get pages that link to the specified page (alias for get_page_backlinks).",
+      "category": "read"
+    },
+    {
+      "name": "get_page_backlinks",
+      "description": "Get pages that link to the specified page with comprehensive metadata.",
+      "category": "read"
+    },
+    {
+      "name": "get_block_content",
+      "description": "Get detailed content and metadata for a specific block using its UUID.",
+      "category": "read"
+    },
+    {
+      "name": "get_all_page_content",
+      "description": "Get comprehensive page content including all blocks and their full content.",
+      "category": "read"
+    },
+    {
+      "name": "get_linked_flashcards",
+      "description": "Get flashcards from the specified page and all pages that link to it.",
+      "category": "read"
+    },
+    {
+      "name": "search",
+      "description": "Search the Logseq graph for matching blocks, pages, and files.",
+      "category": "read"
+    },
+    {
+      "name": "query",
+      "description": "Query the Logseq graph using Datalog DSL syntax.",
+      "category": "read"
+    },
+    {
+      "name": "find_pages_by_property",
+      "description": "Find Logseq pages that have a specific property set.",
+      "category": "read"
+    },
+    {
+      "name": "get_pages_from_namespace",
+      "description": "Get all pages under a Logseq namespace hierarchy.",
+      "category": "read"
+    },
+    {
+      "name": "get_pages_tree_from_namespace",
+      "description": "Get pages under a Logseq namespace displayed as an ASCII tree.",
+      "category": "read"
+    },
+    {
+      "name": "create_page",
+      "description": "Create a new page in Logseq with optional markdown content.",
+      "category": "write"
+    },
+    {
+      "name": "delete_page",
+      "description": "Delete a page from the Logseq graph.",
+      "category": "write"
+    },
+    {
+      "name": "rename_page",
+      "description": "Rename a page in Logseq.",
+      "category": "write"
+    },
+    {
+      "name": "update_page",
+      "description": "Update an existing Logseq page by appending or replacing its content.",
+      "category": "write"
+    },
+    {
+      "name": "append_block_in_page",
+      "description": "Append a new block to a specified page in Logseq.",
+      "category": "write"
+    },
+    {
+      "name": "edit_block",
+      "description": "Edit a block in Logseq.",
+      "category": "write"
+    },
+    {
+      "name": "update_block",
+      "description": "Update the content of a Logseq block.",
+      "category": "write"
+    },
+    {
+      "name": "insert_nested_block",
+      "description": "Insert a new block as a child or sibling of an existing block.",
+      "category": "write"
+    },
+    {
+      "name": "delete_block",
+      "description": "Delete a block from Logseq by its UUID.",
+      "category": "write"
+    },
+    {
+      "name": "set_block_properties",
+      "description": "Set one or more properties on a Logseq block (DB-mode only).",
+      "category": "write",
+      "requires": { "LOGSEQ_DB_MODE": "true" }
+    },
+    {
+      "name": "vector_search",
+      "description": "Semantic similarity search across all synced Logseq blocks using LanceDB.",
+      "category": "vector",
+      "optional": true,
+      "requires": { "LOGSEQ_VECTOR_ENABLED": "true" }
+    },
+    {
+      "name": "vector_db_status",
+      "description": "Report vector DB status: enabled state, path, document count, and sync state.",
+      "category": "vector",
+      "optional": true,
+      "requires": { "LOGSEQ_VECTOR_ENABLED": "true" }
+    }
+  ],
+  "optionalFeatures": {
+    "vectorSearch": {
+      "description": "Semantic block search via LanceDB. Requires installing the [vector] extra and running logseq-sync.",
+      "installCommand": "uv sync --group vector",
+      "syncCommand": "uv run logseq-sync --once",
+      "watchCommand": "uv run logseq-sync",
+      "envVars": ["LOGSEQ_VECTOR_ENABLED", "LOGSEQ_VECTOR_PATH", "LOGSEQ_GRAPH_PATH"]
+    }
+  },
+  "setup": {
+    "steps": [
+      {
+        "id": "enable-logseq-api",
+        "title": "Enable Logseq HTTP API",
+        "description": "Open Logseq → Settings → Features → Developer mode → Enable HTTP APIs server. Copy the token shown."
+      },
+      {
+        "id": "configure-token",
+        "title": "Set required environment variables",
+        "description": "Set LOGSEQ_API_TOKEN to the token copied from Logseq. Optionally adjust LOGSEQ_API_ENDPOINT if you changed the port."
+      },
+      {
+        "id": "verify",
+        "title": "Verify connection",
+        "description": "Ask Claude: 'List all my Logseq pages'. You should see your knowledge graph pages returned."
+      }
+    ]
+  }
+}
