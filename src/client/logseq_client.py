@@ -440,24 +440,25 @@ class LogseqClient:
         return result if result is not None else []
 
     async def resolve_page_uuids(self, uuids: list[str]) -> dict[str, str]:
-        """Resolve a list of page UUIDs to their display names.
+        """Resolve a batch of page UUIDs to their original names in one query.
 
-        Args:
-            uuids: List of UUID strings.
-
-        Returns:
-            Dict mapping uuid → page name.
-
-        Complexity: O(U) where U is uuid count (one API call per UUID).
+        @complexity O(1) network call (single datascript) + O(R) for R rows.
         """
-        result: dict[str, str] = {}
-        for uuid in uuids:
-            page = await self._call("logseq.Editor.getPage", [uuid])
-            if page and isinstance(page, dict):
-                name = page.get("originalName") or page.get("name")
-                if name:
-                    result[uuid] = name
-        return result
+        if not uuids:
+            return {}
+        safe = [u.replace("\\", "\\\\").replace('"', '\\"') for u in uuids]
+        or_clauses = " ".join(f'[?e :block/uuid "{u}"]' for u in safe)
+        query = (
+            "[:find ?uuid ?name "
+            ":where "
+            f"(or {or_clauses}) "
+            "[?e :block/uuid ?uuid] "
+            "[?e :block/original-name ?name]]"
+        )
+        rows = await self.datascript_query(query)
+        return {
+            row[0]: row[1] for row in rows if isinstance(row, list) and len(row) >= 2
+        }
 
     async def get_blocks_db_properties(self, blocks: list[dict]) -> dict[str, dict]:
         """Fetch DB-mode properties for a list of blocks.

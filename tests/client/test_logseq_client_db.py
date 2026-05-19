@@ -48,30 +48,27 @@ async def test_datascript_query_returns_empty_list_on_none(client, mock_call):
 # ── resolve_page_uuids ────────────────────────────────────────────────────────
 
 
-async def test_resolve_page_uuids_batches_requests(client, mock_call):
-    """One _call per UUID — result keyed by uuid."""
-    mock_call.side_effect = [
-        {"originalName": "Page Alpha", "name": "page-alpha"},
-        {"originalName": "Page Beta", "name": "page-beta"},
-    ]
-    uuids = ["uuid-1", "uuid-2"]
-    result = await client.resolve_page_uuids(uuids)
-    assert mock_call.await_count == 2
-    assert result == {"uuid-1": "Page Alpha", "uuid-2": "Page Beta"}
-
-
-async def test_resolve_page_uuids_skips_missing(client, mock_call):
-    """UUIDs that return None are omitted from the result."""
-    mock_call.side_effect = [None, {"originalName": "Found", "name": "found"}]
-    result = await client.resolve_page_uuids(["missing", "present"])
-    assert "missing" not in result
-    assert result["present"] == "Found"
-
-
 async def test_resolve_page_uuids_empty_input(client, mock_call):
     result = await client.resolve_page_uuids([])
     assert result == {}
     mock_call.assert_not_awaited()
+
+
+async def test_resolve_page_uuids_uses_single_datascript_query():
+    client = LogseqClient(LogseqConfig(endpoint="http://x/api", token="t"))
+    with patch.object(client, "datascript_query", new_callable=AsyncMock) as ds:
+        ds.return_value = [["uuid-a", "Page A"], ["uuid-b", "Page B"]]
+        result = await client.resolve_page_uuids(["uuid-a", "uuid-b"])
+        ds.assert_awaited_once()
+        assert result == {"uuid-a": "Page A", "uuid-b": "Page B"}
+
+
+async def test_resolve_page_uuids_empty_input_returns_empty_dict():
+    client = LogseqClient(LogseqConfig(endpoint="http://x/api", token="t"))
+    with patch.object(client, "datascript_query", new_callable=AsyncMock) as ds:
+        result = await client.resolve_page_uuids([])
+        assert result == {}
+        ds.assert_not_awaited()
 
 
 # ── get_blocks_db_properties ──────────────────────────────────────────────────
