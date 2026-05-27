@@ -16,6 +16,7 @@ _EXPECTED = sorted(
         "edit_block",
         "find_pages_by_property",
         "fs_read_page",
+        "fs_write_page",
         "get_all_page_content",
         "get_all_pages",
         "get_block_content",
