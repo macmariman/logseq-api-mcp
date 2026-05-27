@@ -7,11 +7,14 @@ from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
 from src.tools.formatters.pages import format_namespace_tree
 from src.logging_setup import get_logger
+from src.tools._marker import hidden
 
 
 _log = get_logger(__name__)
 
 
+# Hidden: redundant with get_pages_from_namespace (flat list covers the same use cases).
+@hidden
 async def get_pages_tree_from_namespace(
     client: LogseqClient,
     config: LogseqConfig,

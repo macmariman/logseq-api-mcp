@@ -1,6 +1,6 @@
 # logseq-api-mcp
 
-**Your AI assistant starts every session blind to your Logseq knowledge graph. logseq-api-mcp fixes that: 21 tools to read, write, query, and search your notes — auto-registered the moment you drop a Python file into `src/tools/`.**
+**Your AI assistant starts every session blind to your Logseq knowledge graph. logseq-api-mcp fixes that: a curated set of tools to read, write, query, and search your notes — auto-registered the moment you drop a Python file into `src/tools/`.**
 
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
@@ -12,7 +12,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/architecture-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/architecture-light.svg">
-  <img src="assets/architecture-light.svg" alt="Architecture: AI Client → logseq-api-mcp (21 tools, privacy) → Logseq API → Knowledge Graph" width="960">
+  <img src="assets/architecture-light.svg" alt="Architecture: AI Client → logseq-api-mcp (tools, privacy) → Logseq API → Knowledge Graph" width="960">
 </picture>
 
 ---
@@ -54,7 +54,7 @@ Getting your token: open Logseq, go to **Settings → Features → Developer mod
 }
 ```
 
-Restart Claude Desktop. All 21 tools are live.
+Restart Claude Desktop. The visible tools are live; see [Hiding / Reactivating Tools](#hiding--reactivating-tools) below for the full surface and how to opt in to the rest.
 
 ---
 
@@ -159,6 +159,36 @@ async def my_tool(param: str) -> List[TextContent]:
 ```
 
 The `_run(client, config, ...)` pattern keeps the logic testable via `FakeLogseqClient` in `tests/conftest.py`. Function names starting with `_` are not registered.
+
+---
+
+## Hiding / Reactivating Tools
+
+Tools can be hidden from MCP clients without deleting them, using the `@hidden` decorator from [`src/tools/_marker.py`](src/tools/_marker.py). Hidden tools stay importable, testable, and present in `tools.__all__` — they are only filtered out at MCP registration time.
+
+**To hide a tool**, add two lines to its file:
+
+```python
+from src.tools._marker import hidden
+
+@hidden
+async def my_tool(...):
+    ...
+```
+
+**To reactivate a tool**, comment or remove those two lines:
+
+```python
+# from src.tools._marker import hidden
+#
+# @hidden
+async def my_tool(...):
+    ...
+```
+
+Restart the MCP server. The tool appears again in the client's tool list. Tests are unaffected — they import the function by name regardless of whether it is hidden.
+
+This is the recommended mechanism for keeping tools available in the codebase while reducing the MCP schema size advertised to LLM clients (each visible tool costs ~200–300 input tokens per turn).
 
 ---
 

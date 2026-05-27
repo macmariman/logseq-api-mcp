@@ -1,4 +1,8 @@
-"""v1.0.1 tool surface contract."""
+"""Tool surface contract.
+
+Pinned to detect accidental additions/removals. Update both the list and
+the expected count when adding or removing a tool from src/tools/.
+"""
 
 from src import tools
 
@@ -11,6 +15,7 @@ _EXPECTED = sorted(
         "delete_page",
         "edit_block",
         "find_pages_by_property",
+        "fs_read_page",
         "get_all_page_content",
         "get_all_pages",
         "get_block_content",
@@ -30,6 +35,6 @@ _EXPECTED = sorted(
 )
 
 
-def test_tools_surface_is_exactly_21():
+def test_tools_surface_is_pinned():
     assert sorted(tools.__all__) == _EXPECTED
-    assert len(tools.__all__) == 21
+    assert len(tools.__all__) == len(_EXPECTED)

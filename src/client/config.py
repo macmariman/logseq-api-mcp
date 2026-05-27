@@ -14,6 +14,9 @@ class LogseqConfig:
         verify_ssl: Whether to verify TLS certificates.
         db_mode: Whether the Logseq instance runs in DB mode.
         exclude_tags: Page tags that should be hidden from all tools.
+        graph_path: Absolute path to the Logseq graph root (folder containing
+            pages/ and journals/). Required by fs_* tools; empty string means
+            filesystem tools are disabled.
 
     Complexity: O(1) construction.
     """
@@ -23,13 +26,15 @@ class LogseqConfig:
     verify_ssl: bool = True
     db_mode: bool = False
     exclude_tags: tuple[str, ...] = field(default_factory=tuple)
+    graph_path: str = ""
 
 
 def load_config() -> LogseqConfig:
     """Load LogseqConfig from environment variables.
 
     Reads LOGSEQ_API_TOKEN (required), LOGSEQ_API_ENDPOINT or LOGSEQ_API_URL,
-    LOGSEQ_VERIFY_SSL, LOGSEQ_DB_MODE, and LOGSEQ_EXCLUDE_TAGS.
+    LOGSEQ_VERIFY_SSL, LOGSEQ_DB_MODE, LOGSEQ_EXCLUDE_TAGS, and
+    LOGSEQ_GRAPH_PATH.
 
     Returns:
         LogseqConfig populated from environment.
@@ -68,10 +73,13 @@ def load_config() -> LogseqConfig:
         tuple(t.strip() for t in raw_tags.split(",") if t.strip()) if raw_tags else ()
     )
 
+    graph_path = os.getenv("LOGSEQ_GRAPH_PATH", "").strip()
+
     return LogseqConfig(
         endpoint=endpoint,
         token=token,
         verify_ssl=verify_ssl,
         db_mode=db_mode,
         exclude_tags=exclude_tags,
+        graph_path=graph_path,
     )

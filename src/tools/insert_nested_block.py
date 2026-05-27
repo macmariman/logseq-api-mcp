@@ -6,11 +6,14 @@ from mcp.types import TextContent
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
+from src.tools._marker import hidden
 
 
 _log = get_logger(__name__)
 
 
+# Hidden: surgical single-block insert; bulk fs_write_page covers the common case.
+@hidden
 async def insert_nested_block(
     client: LogseqClient,
     config: LogseqConfig,

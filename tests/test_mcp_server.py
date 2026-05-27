@@ -12,10 +12,23 @@ def test_register_all_tools_accepts_mcp_client_and_config():
     cfg = LogseqConfig(endpoint="http://x/api", token="t")
     client = LogseqClient(cfg)
     register_all_tools(mcp, client, config=cfg)
-    # mcp.tool() called once per discovered tool
+    # mcp.tool() is called once per VISIBLE tool. Tools decorated with
+    # @hidden remain in tools.__all__ (for tests/imports) but are not
+    # announced to MCP clients — see src/tools/_marker.py.
     from src import tools
 
-    assert mcp.tool.call_count == len(tools.__all__)
+    # Mirror the registry's two filters: static @hidden marker, and the
+    # dynamic fs_* gate (no graph_path or db_mode → fs_* tools are skipped).
+    def _registered(name: str) -> bool:
+        fn = getattr(tools, name)
+        if getattr(fn, "_mcp_hidden", False):
+            return False
+        if name.startswith("fs_") and (cfg.db_mode or not cfg.graph_path):
+            return False
+        return True
+
+    visible = [name for name in tools.__all__ if _registered(name)]
+    assert mcp.tool.call_count == len(visible)
 
 
 def test_server_module_imports_without_writing_stdout(capsys):

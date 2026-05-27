@@ -6,11 +6,14 @@ from mcp.types import TextContent
 from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
 from src.logging_setup import get_logger
+from src.tools._marker import hidden
 
 
 _log = get_logger(__name__)
 
 
+# Hidden: surgical UUID-preserving property edit; rarely needed for personal use.
+@hidden
 async def set_block_properties(
     client: LogseqClient,
     config: LogseqConfig,

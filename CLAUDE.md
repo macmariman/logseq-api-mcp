@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Model Context Protocol (MCP) server** that gives AI assistants access to Logseq knowledge bases. It ships **21 standard tools** (read + write), all discovered and registered automatically.
+This is a **Model Context Protocol (MCP) server** that gives AI assistants access to Logseq knowledge bases. Tools live under `src/tools/` and are discovered automatically. A subset is hidden by default via `@hidden` to keep the per-turn token cost down (see "Hiding / Reactivating Tools"); filesystem tools (`fs_*`) only register when `LOGSEQ_GRAPH_PATH` is set.
 
 **Key Innovation**: Zero-configuration tool management — drop a `.py` file into `src/tools/` and it is auto-discovered, imported, and registered with the MCP server.
 
@@ -28,7 +28,7 @@ src/
 └── tools/
     ├── __init__.py        # Scans *.py, imports each, adds public functions to __all__
     ├── formatters/        # Pure formatter functions (pages.py, blocks.py, search.py)
-    └── *.py               # 21 tool modules — one public async function each
+    └── *.py               # one tool per module — one public async function each
 ```
 
 ### Dynamic Tool Discovery
@@ -170,6 +170,38 @@ async def test_your_tool_handles_exception():
 ### 3. That's it
 
 No imports, no registration, no config changes required.
+
+## Hiding / Reactivating Tools
+
+Tools can be hidden from the MCP client without deletion, via the `@hidden` decorator in `src/tools/_marker.py`. Hidden tools stay in `tools.__all__`, remain importable, and are still covered by surface-contract tests — `src/registry.py` filters them out at FastMCP registration time.
+
+**Why hide**: each visible tool costs ~200–300 input tokens per turn in the MCP schema. Hiding 10 redundant or rarely-used tools saves roughly 2.5k tokens per turn without losing the ability to bring them back.
+
+**To hide a tool**, two lines added to the tool file:
+
+```python
+from src.tools._marker import hidden
+
+# Hidden: <reason — keep this comment so future readers know why>
+@hidden
+async def my_tool(...):
+    ...
+```
+
+**To reactivate**, comment or delete those two lines and restart the MCP server:
+
+```python
+# from src.tools._marker import hidden
+#
+# @hidden
+async def my_tool(...):
+    ...
+```
+
+**Invariants**:
+- `tools.__all__` always contains every discovered tool (visible + hidden). Tests audit the full surface.
+- `registry.register_all_tools()` is the single point that filters `_mcp_hidden`. No env var, no global state.
+- Hidden tools must still pass `mypy`, `ruff`, and all existing tests. The `@hidden` decorator does not change the function signature or behavior.
 
 ## Testing Strategy
 

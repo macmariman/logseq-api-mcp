@@ -8,11 +8,14 @@ from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
 from src.tools.formatters.blocks import format_block_detail
 from src.logging_setup import get_logger
+from src.tools._marker import hidden
 
 
 _log = get_logger(__name__)
 
 
+# Hidden: surgical UUID-targeted read; rarely needed when reading full pages via fs_read_page.
+@hidden
 async def get_block_content(
     client: LogseqClient,
     config: LogseqConfig,

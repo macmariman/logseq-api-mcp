@@ -33,6 +33,17 @@ def register_all_tools(
     """
     for tool_name in tools.__all__:
         tool_function = getattr(tools, tool_name)
+        # Skip tools marked with @hidden — see src/tools/_marker.py. They
+        # stay in tools.__all__ for tests and direct imports but are not
+        # announced to MCP clients.
+        if getattr(tool_function, "_mcp_hidden", False):
+            continue
+        # Dynamic gate for filesystem tools: fs_* only registers when the
+        # graph is file-mode and LOGSEQ_GRAPH_PATH points at it. We skip
+        # silently here; missing config is reported by the tool itself if
+        # somehow called.
+        if tool_name.startswith("fs_") and (config.db_mode or not config.graph_path):
+            continue
         sig = inspect.signature(tool_function)
         first_two = list(sig.parameters)[:2]
         if first_two == ["client", "config"]:

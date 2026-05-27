@@ -10,6 +10,7 @@ from src.client.config import LogseqConfig
 from src.privacy.exclude_tags import is_page_excluded
 from src.tools.formatters.blocks import collect_block_uuids, format_block_tree
 from src.logging_setup import get_logger
+from src.tools._marker import hidden
 
 
 _log = get_logger(__name__)
@@ -49,6 +50,8 @@ async def _resolve_identifier(
     return identifier
 
 
+# Hidden: superseded by fs_read_page for file-mode graphs (cleaner output, no parser quirks).
+@hidden
 async def get_all_page_content(
     client: LogseqClient,
     config: LogseqConfig,

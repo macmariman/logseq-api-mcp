@@ -35,6 +35,10 @@ for py_file in _tools_dir.glob("*.py"):
                 continue
             if obj.__module__ != module.__name__:
                 continue
+            # Include ALL discovered tools (even @hidden ones) in __all__ so
+            # tests can audit them and they remain importable. The MCP
+            # registry filters hidden tools out at registration time —
+            # see src/registry.py and src/tools/_marker.py.
             _discovered_tools[name] = obj
             __all__.append(name)
             globals()[name] = obj
