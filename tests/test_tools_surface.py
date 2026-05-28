@@ -21,6 +21,7 @@ _EXPECTED = sorted(
         "get_all_pages",
         "get_block_content",
         "get_linked_flashcards",
+        "get_linked_references",
         "get_page_backlinks",
         "get_page_blocks",
         "get_pages_from_namespace",

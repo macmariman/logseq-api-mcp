@@ -13,6 +13,7 @@ _WRAPPERS_TO_AUDIT = [
     "get_block_content",
     "get_page_backlinks",
     "get_linked_flashcards",
+    "get_linked_references",
     "search",
     "query",
     "find_pages_by_property",
