@@ -7,11 +7,15 @@ from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
 from src.parser.markdown import parse_content
 from src.logging_setup import get_logger
+from src.tools._marker import hidden
 
 
 _log = get_logger(__name__)
 
 
+# Hidden: use fs_write_page instead — direct disk write avoids the double-bullet
+# content parsing issue and works without Logseq running.
+@hidden
 async def create_page(
     client: LogseqClient,
     config: LogseqConfig,
