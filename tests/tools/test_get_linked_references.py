@@ -449,3 +449,81 @@ async def test_handles_client_exception():
 
     assert "❌" in result[0].text
     assert "api down" in result[0].text
+
+
+# ── Hashtag syntax tests ──────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_bare_hashtag_matches():
+    """``#meeting`` in block content matches a search for ``meeting``."""
+    client = _TreeClient(
+        trees_by_page={"p": [_block("u1", "#meeting great session")]},
+        refs_by_tag={"meeting": [[_page("p")]]},
+    )
+    cfg = LogseqConfig(endpoint="http://x", token="t")
+
+    text = (await get_linked_references(client, cfg, "meeting"))[0].text
+
+    assert "Found 1 reference to [[meeting]]" in text
+    assert "great session" in text
+
+
+@pytest.mark.asyncio
+async def test_bare_hashtag_at_end_of_content_matches():
+    """``#meeting`` at the very end of a block (no trailing space) still matches."""
+    client = _TreeClient(
+        trees_by_page={"p": [_block("u1", "notes from #meeting")]},
+        refs_by_tag={"meeting": [[_page("p")]]},
+    )
+    cfg = LogseqConfig(endpoint="http://x", token="t")
+
+    text = (await get_linked_references(client, cfg, "meeting"))[0].text
+
+    assert "Found 1 reference to [[meeting]]" in text
+
+
+@pytest.mark.asyncio
+async def test_bare_hashtag_no_prefix_false_positive():
+    """``#meeting`` must NOT match a block that only contains ``#meetings``."""
+    client = _TreeClient(
+        trees_by_page={"p": [_block("u1", "attending #meetings today")]},
+        refs_by_tag={"meeting": [[_page("p")]]},
+    )
+    cfg = LogseqConfig(endpoint="http://x", token="t")
+
+    text = (await get_linked_references(client, cfg, "meeting"))[0].text
+
+    assert "Found 0 references to [[meeting]]" in text
+
+
+@pytest.mark.asyncio
+async def test_bracket_hashtag_matches_multiword_tag():
+    """``#[[Kz/Inn Hub]]`` in block content matches a search for ``Kz/Inn Hub``."""
+    client = _TreeClient(
+        trees_by_page={"p": [_block("u1", "#[[Kz/Inn Hub]] standup notes")]},
+        refs_by_tag={"Kz/Inn Hub": [[_page("p")]]},
+    )
+    cfg = LogseqConfig(endpoint="http://x", token="t")
+
+    text = (await get_linked_references(client, cfg, "Kz/Inn Hub"))[0].text
+
+    assert "Found 1 reference to [[Kz/Inn Hub]]" in text
+    assert "standup notes" in text
+
+
+@pytest.mark.asyncio
+async def test_tag_with_spaces_does_not_generate_bare_hashtag():
+    """Tags with spaces must not generate a bare ``#Tag`` ref string
+    (it would never appear in Logseq content without brackets)."""
+    client = _TreeClient(
+        # Only bare #Kz/Inn Hub (invalid in Logseq) — should NOT match.
+        trees_by_page={"p": [_block("u1", "#Kz/Inn Hub notes")]},
+        refs_by_tag={"Kz/Inn Hub": [[_page("p")]]},
+    )
+    cfg = LogseqConfig(endpoint="http://x", token="t")
+
+    text = (await get_linked_references(client, cfg, "Kz/Inn Hub"))[0].text
+
+    # Neither [[Kz/Inn Hub]] nor #[[Kz/Inn Hub]] appears in content.
+    assert "Found 0 references to [[Kz/Inn Hub]]" in text

@@ -99,8 +99,23 @@ def _source_page_name(page_info: dict) -> str:
 
 
 def _content_references_any(content: str, ref_strings: list[str]) -> bool:
-    """Return True if ``content`` contains any of the ``[[tag]]`` strings."""
-    return any(s in content for s in ref_strings)
+    """Return True if ``content`` contains any of the reference strings.
+
+    Bracket refs (``[[Tag]]``, ``#[[Tag]]``) use plain substring matching.
+    Bare hash refs (``#Tag``) are checked against content padded with a
+    trailing space so that end-of-string tags are caught without false-
+    positive prefix matches (``#meeting`` does not match ``#meetings``).
+    """
+    padded = content + " "
+    for s in ref_strings:
+        if s.startswith("#") and "[[" not in s:
+            # Bare #Tag: require space immediately after to avoid prefix matches.
+            if (s + " ") in padded:
+                return True
+        else:
+            if s in content:
+                return True
+    return False
 
 
 def _find_matching_blocks(blocks: list[dict], ref_strings: list[str]) -> list[dict]:
@@ -223,10 +238,18 @@ async def get_linked_references(
                 if name and name != tag:
                     source_tags.append(name)
 
-        # The strings we look for inside block content. Logseq stores refs as
-        # `[[Page Name]]` even for namespaced pages, so this exact-string check
-        # naturally distinguishes "Kz/Inn Hub" from "Kz/Inn Hub/CCAF".
-        ref_strings = [f"[[{t}]]" for t in source_tags]
+        # The strings we look for inside block content. Three forms per tag:
+        #   [[Tag]]     — standard wiki-link (always)
+        #   #[[Tag]]    — hashtag with brackets (always; delimited by ]])
+        #   #Tag        — bare hashtag (only for tags without spaces; the
+        #                 space-padding trick in _content_references_any
+        #                 prevents #meeting from matching #meetings)
+        ref_strings: list[str] = []
+        for t in source_tags:
+            ref_strings.append(f"[[{t}]]")
+            ref_strings.append(f"#[[{t}]]")
+            if " " not in t:
+                ref_strings.append(f"#{t}")
 
         # Collect the set of linking pages (union across source tags).
         # The API returns groups where group[0] is the linking page. The block
