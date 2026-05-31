@@ -2,7 +2,13 @@
 
 from pathlib import Path
 
-from src.fs.paths import page_name_to_filename, resolve_page_path
+from src.fs.paths import (
+    draw_name_to_filename,
+    page_name_to_filename,
+    resolve_draw_path,
+    resolve_page_path,
+    target_path_for_draw,
+)
 
 
 # ── page_name_to_filename ────────────────────────────────────────────────────
@@ -85,3 +91,66 @@ def test_resolve_rejects_path_traversal(tmp_path: Path):
     (graph / "pages").mkdir(parents=True)
     # "../outside" should not be resolvable through the pages dir.
     assert resolve_page_path(str(graph), "../outside") is None
+
+
+# ── draw_name_to_filename ────────────────────────────────────────────────────
+
+
+def test_draw_plain_name_gets_extension():
+    assert (
+        draw_name_to_filename("2026-05-31-17-00-19") == "2026-05-31-17-00-19.excalidraw"
+    )
+
+
+def test_draw_existing_extension_not_doubled():
+    assert (
+        draw_name_to_filename("2026-05-31-17-00-19.excalidraw")
+        == "2026-05-31-17-00-19.excalidraw"
+    )
+
+
+def test_draw_draws_prefix_is_stripped():
+    assert (
+        draw_name_to_filename("draws/2026-05-31-17-00-19.excalidraw")
+        == "2026-05-31-17-00-19.excalidraw"
+    )
+
+
+def test_draw_name_special_chars_are_encoded():
+    assert draw_name_to_filename("a/b") == "a%2Fb.excalidraw"
+
+
+# ── resolve_draw_path / target_path_for_draw ──────────────────────────────────
+
+
+def test_target_for_draw_none_when_graph_path_empty():
+    assert target_path_for_draw("", "x") is None
+
+
+def test_target_for_draw_points_into_draws_subdir(tmp_path: Path):
+    target = target_path_for_draw(str(tmp_path), "my-draw")
+    assert target == (tmp_path / "draws" / "my-draw.excalidraw").resolve()
+
+
+def test_resolve_draw_returns_none_when_missing(tmp_path: Path):
+    (tmp_path / "draws").mkdir()
+    assert resolve_draw_path(str(tmp_path), "nope") is None
+
+
+def test_resolve_draw_finds_existing(tmp_path: Path):
+    draws = tmp_path / "draws"
+    draws.mkdir()
+    target = draws / "2026-05-31-17-00-19.excalidraw"
+    target.write_text("{}")
+    assert (
+        resolve_draw_path(str(tmp_path), "draws/2026-05-31-17-00-19.excalidraw")
+        == target.resolve()
+    )
+
+
+def test_resolve_draw_rejects_path_traversal(tmp_path: Path):
+    outside = tmp_path.parent / "outside.excalidraw"
+    outside.write_text("{}")
+    graph = tmp_path / "graph"
+    (graph / "draws").mkdir(parents=True)
+    assert resolve_draw_path(str(graph), "../outside") is None

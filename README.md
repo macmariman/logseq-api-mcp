@@ -92,6 +92,19 @@ Restart Claude Desktop. The visible tools are live; see [Hiding / Reactivating T
 | `delete_block` | Delete a block by UUID |
 | `set_block_properties` | Set structured properties on a block (DB-mode only) |
 
+### Filesystem — file-mode graphs (4 tools)
+
+These tools bypass the HTTP API and work directly on the graph's files on disk. They only register when `LOGSEQ_GRAPH_PATH` points at the graph root, and refuse to run in DB-mode.
+
+| Tool | What it does |
+|---|---|
+| `fs_read_page` | Read a page's raw markdown straight from its `.md` file |
+| `fs_write_page` | Atomically create or overwrite a full page on disk (`create` / `overwrite` / `upsert`) |
+| `fs_read_excalidraw` | Read a `draws/<name>.excalidraw` drawing: a summary (element counts + text labels) plus the raw scene JSON |
+| `fs_write_excalidraw` | Atomically write an Excalidraw scene to `draws/`; returns the filename and a `[[draws/...]]` reference to paste into a page |
+
+> Excalidraw round-trip: `fs_read_excalidraw` gives you the scene JSON, edit it, then `fs_write_excalidraw` writes it back. The write tool never touches a page — insert the returned `[[draws/<name>.excalidraw]]` link with `fs_write_page` or a normal block edit.
+
 ---
 
 ## Configuration
@@ -102,6 +115,7 @@ Restart Claude Desktop. The visible tools are live; see [Hiding / Reactivating T
 | `LOGSEQ_API_TOKEN` | *(required)* | Bearer auth token |
 | `LOGSEQ_VERIFY_SSL` | `true` | Set `false` to skip TLS verification |
 | `LOGSEQ_DB_MODE` | `false` | Enable Logseq database-format API paths |
+| `LOGSEQ_GRAPH_PATH` | *(empty)* | Absolute path to the graph root; enables the `fs_*` filesystem tools |
 | `LOGSEQ_EXCLUDE_TAGS` | *(empty)* | Comma-separated tags — pages with any tag are hidden |
 | `LOGSEQ_LOG_LEVEL` | `WARNING` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 

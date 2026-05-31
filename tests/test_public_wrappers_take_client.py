@@ -31,6 +31,8 @@ _WRAPPERS_TO_AUDIT = [
     "set_block_properties",
     "fs_read_page",
     "fs_write_page",
+    "fs_read_excalidraw",
+    "fs_write_excalidraw",
 ]
 
 

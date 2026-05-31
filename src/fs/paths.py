@@ -84,6 +84,88 @@ def resolve_page_path(graph_path: str, page_name: str) -> Path | None:
     return None
 
 
+# ── Excalidraw draws ─────────────────────────────────────────────────────────
+#
+# Logseq's ``draw`` command stores each drawing as a single ``.excalidraw``
+# file under ``<graph>/draws/``. Pages reference it as a file link:
+# ``[[draws/<name>.excalidraw]]``.
+
+
+def draw_name_to_filename(name: str) -> str:
+    """Convert an Excalidraw draw name to its on-disk ``.excalidraw`` filename.
+
+    Accepts the name in any of the forms a user might copy from a page:
+    ``"2026-05-31-17-00-19"``, ``"2026-05-31-17-00-19.excalidraw"`` or
+    ``"draws/2026-05-31-17-00-19.excalidraw"``. The ``draws/`` prefix and the
+    ``.excalidraw`` suffix are stripped before encoding, then the suffix is
+    re-appended, so the result is always a bare filename.
+
+    Args:
+        name: Draw name as shown in Logseq, with or without the ``draws/``
+            prefix and ``.excalidraw`` suffix.
+
+    Returns:
+        The ``.excalidraw`` filename Logseq would use.
+
+    Complexity: O(N) where N is len(name).
+    """
+    stem = name.strip()
+    stem = stem.removeprefix("draws/")
+    stem = stem.removesuffix(".excalidraw")
+    for ch, repl in _ENCODE_MAP:
+        stem = stem.replace(ch, repl)
+    return f"{stem}.excalidraw"
+
+
+def resolve_draw_path(graph_path: str, name: str) -> Path | None:
+    """Resolve an Excalidraw draw name to its on-disk path inside ``<graph>``.
+
+    Looks only under ``draws/``. Returns the path if the file exists and
+    resolves inside the graph root, otherwise ``None``. Path traversal that
+    escapes ``graph_path`` is rejected.
+
+    Args:
+        graph_path: Absolute path to the graph root.
+        name: Draw name (``draws/`` prefix and ``.excalidraw`` suffix optional).
+
+    Returns:
+        Absolute :class:`Path` to the ``.excalidraw`` file, or ``None``.
+
+    Complexity: O(1) filesystem stat.
+    """
+    candidate = target_path_for_draw(graph_path, name)
+    if candidate is None or not candidate.is_file():
+        return None
+    return candidate
+
+
+def target_path_for_draw(graph_path: str, name: str) -> Path | None:
+    """Compute the on-disk target path for *writing* a (possibly new) draw.
+
+    Unlike :func:`resolve_draw_path`, the file need not exist. Path traversal
+    that would escape ``graph_path`` is rejected (returns ``None``).
+
+    Args:
+        graph_path: Absolute path to the graph root.
+        name: Draw name (``draws/`` prefix and ``.excalidraw`` suffix optional).
+
+    Returns:
+        Absolute :class:`Path` under ``<graph>/draws/``, or ``None`` on invalid
+        input (empty ``graph_path`` or path traversal).
+    """
+    if not graph_path:
+        return None
+
+    root = Path(graph_path).resolve()
+    filename = draw_name_to_filename(name)
+    candidate = (root / "draws" / filename).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate
+
+
 # Matches Logseq's default journal filename format: ``yyyy_MM_dd``.
 # Custom journal formats are not detected; users with non-default config
 # can create the file manually once and rely on the overwrite path after.

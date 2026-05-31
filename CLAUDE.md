@@ -77,7 +77,7 @@ class LogseqConfig:
     exclude_tags: list[str] = field(default_factory=list)
 ```
 
-`load_config()` reads `LOGSEQ_API_ENDPOINT`, `LOGSEQ_API_TOKEN`, `LOGSEQ_VERIFY_SSL`, `LOGSEQ_DB_MODE`, `LOGSEQ_EXCLUDE_TAGS`.
+`load_config()` reads `LOGSEQ_API_ENDPOINT`, `LOGSEQ_API_TOKEN`, `LOGSEQ_VERIFY_SSL`, `LOGSEQ_DB_MODE`, `LOGSEQ_GRAPH_PATH`, `LOGSEQ_EXCLUDE_TAGS`.
 
 ## Development Commands
 
@@ -249,6 +249,7 @@ class FakeLogseqClient(LogseqClient):
 | `LOGSEQ_API_TOKEN` | *(required)* | Bearer auth token |
 | `LOGSEQ_VERIFY_SSL` | `true` | Set `false`/`0`/`no` to skip TLS verification |
 | `LOGSEQ_DB_MODE` | `false` | Enable Logseq database-format API paths |
+| `LOGSEQ_GRAPH_PATH` | *(empty)* | Absolute path to the graph root; registers the `fs_*` filesystem tools |
 | `LOGSEQ_EXCLUDE_TAGS` | *(empty)* | Comma-separated tags; pages tagged with any are hidden |
 | `LOGSEQ_LOG_LEVEL` | `WARNING` | Python log level for `logseq_mcp.*` logger |
 
