@@ -140,7 +140,7 @@ async def test_invalid_mode_returns_error(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_traversal_attempt_is_neutralized_by_encoding(tmp_path: Path):
-    """Slashes in page names are URL-encoded, so traversal collapses to a flat name."""
+    """Slashes in page names are encoded, so traversal collapses to a flat name."""
     graph = _make_graph(tmp_path)
     cfg = LogseqConfig(endpoint="http://x", token="t", graph_path=str(graph))
 
@@ -148,7 +148,7 @@ async def test_traversal_attempt_is_neutralized_by_encoding(tmp_path: Path):
 
     # Write succeeds but the filename is encoded — file stays inside pages/.
     assert "✅" in result[0].text
-    assert (graph / "pages" / "..%2Fescape.md").exists()
+    assert (graph / "pages" / "..___escape.md").exists()
     # Nothing escapes the graph root.
     assert not (tmp_path.parent / "escape.md").exists()
     assert not (tmp_path / "escape.md").exists()
@@ -201,11 +201,11 @@ async def test_write_is_atomic_no_partial_on_failure(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_encoded_name_round_trip(tmp_path: Path):
-    """Writing 'Foo/Bar' lands at pages/Foo%2FBar.md."""
+    """Writing 'Foo/Bar' lands at pages/Foo___Bar.md (triple-lowbar default)."""
     graph = _make_graph(tmp_path)
     cfg = LogseqConfig(endpoint="http://x", token="t", graph_path=str(graph))
 
     result = await _run(FakeLogseqClient(), cfg, "Foo/Bar", "- nested\n", mode="create")
 
     assert "✅" in result[0].text
-    assert (graph / "pages" / "Foo%2FBar.md").read_text() == "- nested\n"
+    assert (graph / "pages" / "Foo___Bar.md").read_text() == "- nested\n"

@@ -35,7 +35,7 @@ async def test_happy_path_reads_raw_markdown(tmp_path: Path):
 @pytest.mark.asyncio
 async def test_finds_page_with_encoded_name(tmp_path: Path):
     graph = _make_graph(tmp_path)
-    (graph / "pages" / "Foo%2FBar.md").write_text("nested\n")
+    (graph / "pages" / "Foo___Bar.md").write_text("nested\n")
     cfg = LogseqConfig(endpoint="http://x", token="t", graph_path=str(graph))
 
     result = await _run(FakeLogseqClient(), cfg, "Foo/Bar")

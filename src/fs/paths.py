@@ -13,7 +13,12 @@ from pathlib import Path
 
 # Characters Logseq URL-encodes in filenames. Order matters: ``%`` must be
 # encoded first so we don't double-encode the percent signs we introduce.
-_ENCODE_MAP: tuple[tuple[str, str], ...] = (
+#
+# The mapping for ``/`` depends on the graph's ``:file/name-format`` (see
+# ``detect_name_format``): the modern ``:triple-lowbar`` format encodes it as
+# ``___`` while the ``:legacy`` format uses ``%2F``. Every *other* character is
+# percent-encoded the same way in both formats.
+_ENCODE_MAP_LEGACY: tuple[tuple[str, str], ...] = (
     ("%", "%25"),
     ("/", "%2F"),
     ("\\", "%5C"),
@@ -27,20 +32,79 @@ _ENCODE_MAP: tuple[tuple[str, str], ...] = (
     ("|", "%7C"),
 )
 
+# Triple-lowbar differs from legacy only in how ``/`` is encoded.
+_ENCODE_MAP_TRIPLE_LOWBAR: tuple[tuple[str, str], ...] = tuple(
+    ("/", "___") if ch == "/" else (ch, repl) for ch, repl in _ENCODE_MAP_LEGACY
+)
 
-def page_name_to_filename(page_name: str) -> str:
+# Backwards-compatible alias: the legacy map is the historical default.
+_ENCODE_MAP = _ENCODE_MAP_LEGACY
+
+
+def detect_name_format(graph_path: str) -> str:
+    """Detect a graph's ``:file/name-format`` from its ``logseq/config.edn``.
+
+    Reads ``<graph>/logseq/config.edn`` and returns the filename format that
+    governs how ``/`` is encoded in page filenames:
+
+    - ``"legacy"`` when the file declares ``:file/name-format :legacy``.
+    - ``"triple-lowbar"`` when it declares ``:file/name-format :triple-lowbar``
+      **or** when the key is absent / the file is missing (Logseq's modern
+      default for new graphs).
+
+    Only uncommented declarations count: lines whose first non-space character
+    is ``;`` are ignored, so the commented example in the default config does
+    not trigger a false match.
+
+    Args:
+        graph_path: Absolute path to the graph root.
+
+    Returns:
+        ``"legacy"`` or ``"triple-lowbar"``.
+
+    Complexity: O(F) where F is the size of ``config.edn``.
+    """
+    if not graph_path:
+        return "triple-lowbar"
+
+    config_file = Path(graph_path) / "logseq" / "config.edn"
+    try:
+        text = config_file.read_text(encoding="utf-8")
+    except OSError:
+        return "triple-lowbar"
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith(";"):
+            continue
+        match = re.search(r":file/name-format\s+:([a-z-]+)", line)
+        if match:
+            return "legacy" if match.group(1) == "legacy" else "triple-lowbar"
+
+    return "triple-lowbar"
+
+
+def page_name_to_filename(page_name: str, name_format: str = "legacy") -> str:
     """Convert a Logseq page name to its on-disk ``.md`` filename.
 
     Args:
         page_name: Page name as shown in Logseq (e.g. ``"Foo/Bar"``).
+        name_format: Either ``"legacy"`` (``/`` → ``%2F``) or
+            ``"triple-lowbar"`` (``/`` → ``___``). Defaults to ``"legacy"``.
 
     Returns:
-        The ``.md`` filename Logseq would use (e.g. ``"Foo%2FBar.md"``).
+        The ``.md`` filename Logseq would use (e.g. ``"Foo%2FBar.md"`` in
+        legacy mode, ``"Foo___Bar.md"`` in triple-lowbar mode).
 
     Complexity: O(N) where N is len(page_name).
     """
+    encode_map = (
+        _ENCODE_MAP_TRIPLE_LOWBAR
+        if name_format == "triple-lowbar"
+        else _ENCODE_MAP_LEGACY
+    )
     encoded = page_name
-    for ch, repl in _ENCODE_MAP:
+    for ch, repl in encode_map:
         encoded = encoded.replace(ch, repl)
     return f"{encoded}.md"
 
@@ -69,7 +133,7 @@ def resolve_page_path(graph_path: str, page_name: str) -> Path | None:
         return None
 
     root = Path(graph_path).resolve()
-    filename = page_name_to_filename(page_name)
+    filename = page_name_to_filename(page_name, detect_name_format(graph_path))
 
     for subdir in ("pages", "journals"):
         candidate = (root / subdir / filename).resolve()
@@ -205,7 +269,7 @@ def target_path_for_write(graph_path: str, page_name: str) -> Path | None:
         return None
 
     root = Path(graph_path).resolve()
-    filename = page_name_to_filename(page_name)
+    filename = page_name_to_filename(page_name, detect_name_format(graph_path))
     subdir = "journals" if is_journal_name(page_name) else "pages"
     candidate = (root / subdir / filename).resolve()
     try:

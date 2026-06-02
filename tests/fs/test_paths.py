@@ -3,12 +3,21 @@
 from pathlib import Path
 
 from src.fs.paths import (
+    detect_name_format,
     draw_name_to_filename,
     page_name_to_filename,
     resolve_draw_path,
     resolve_page_path,
     target_path_for_draw,
+    target_path_for_write,
 )
+
+
+def _write_config(graph: Path, body: str) -> None:
+    """Create ``<graph>/logseq/config.edn`` with the given body."""
+    logseq_dir = graph / "logseq"
+    logseq_dir.mkdir(parents=True, exist_ok=True)
+    (logseq_dir / "config.edn").write_text(body, encoding="utf-8")
 
 
 # ── page_name_to_filename ────────────────────────────────────────────────────
@@ -20,6 +29,19 @@ def test_plain_name_just_appends_md():
 
 def test_slash_is_url_encoded():
     assert page_name_to_filename("Foo/Bar") == "Foo%2FBar.md"
+
+
+def test_slash_is_url_encoded_explicit_legacy():
+    assert page_name_to_filename("Foo/Bar", "legacy") == "Foo%2FBar.md"
+
+
+def test_slash_is_triple_lowbar_in_triple_lowbar_format():
+    assert page_name_to_filename("Foo/Bar", "triple-lowbar") == "Foo___Bar.md"
+
+
+def test_triple_lowbar_only_changes_slash():
+    # Every other special char is still percent-encoded in triple-lowbar.
+    assert page_name_to_filename("a/b#c:d", "triple-lowbar") == "a___b%23c%3Ad.md"
 
 
 def test_hash_is_url_encoded():
@@ -66,10 +88,20 @@ def test_resolve_finds_in_pages(tmp_path: Path):
     assert resolve_page_path(str(tmp_path), "Hello") == target.resolve()
 
 
-def test_resolve_finds_encoded_name(tmp_path: Path):
+def test_resolve_finds_encoded_name_legacy(tmp_path: Path):
+    _write_config(tmp_path, ":file/name-format :legacy")
     pages = tmp_path / "pages"
     pages.mkdir()
     target = pages / "Foo%2FBar.md"
+    target.write_text("hi")
+    assert resolve_page_path(str(tmp_path), "Foo/Bar") == target.resolve()
+
+
+def test_resolve_finds_triple_lowbar_name(tmp_path: Path):
+    # No config.edn → default is triple-lowbar.
+    pages = tmp_path / "pages"
+    pages.mkdir()
+    target = pages / "Foo___Bar.md"
     target.write_text("hi")
     assert resolve_page_path(str(tmp_path), "Foo/Bar") == target.resolve()
 
@@ -91,6 +123,52 @@ def test_resolve_rejects_path_traversal(tmp_path: Path):
     (graph / "pages").mkdir(parents=True)
     # "../outside" should not be resolvable through the pages dir.
     assert resolve_page_path(str(graph), "../outside") is None
+
+
+# ── detect_name_format ───────────────────────────────────────────────────────
+
+
+def test_detect_format_defaults_to_triple_lowbar_when_no_config(tmp_path: Path):
+    assert detect_name_format(str(tmp_path)) == "triple-lowbar"
+
+
+def test_detect_format_empty_graph_path_defaults_to_triple_lowbar():
+    assert detect_name_format("") == "triple-lowbar"
+
+
+def test_detect_format_reads_legacy(tmp_path: Path):
+    _write_config(tmp_path, "{:file/name-format :legacy}")
+    assert detect_name_format(str(tmp_path)) == "legacy"
+
+
+def test_detect_format_reads_triple_lowbar(tmp_path: Path):
+    _write_config(tmp_path, "{:file/name-format :triple-lowbar}")
+    assert detect_name_format(str(tmp_path)) == "triple-lowbar"
+
+
+def test_detect_format_ignores_commented_declaration(tmp_path: Path):
+    # The default config ships a commented example; it must not match.
+    _write_config(tmp_path, ";;   :file/name-format :legacy\n{}")
+    assert detect_name_format(str(tmp_path)) == "triple-lowbar"
+
+
+def test_detect_format_absent_key_defaults_to_triple_lowbar(tmp_path: Path):
+    _write_config(tmp_path, "{:preferred-format :markdown}")
+    assert detect_name_format(str(tmp_path)) == "triple-lowbar"
+
+
+# ── target_path_for_write (namespace formats) ─────────────────────────────────
+
+
+def test_target_for_write_uses_triple_lowbar_by_default(tmp_path: Path):
+    target = target_path_for_write(str(tmp_path), "Kz/CareerPath")
+    assert target == (tmp_path / "pages" / "Kz___CareerPath.md").resolve()
+
+
+def test_target_for_write_uses_legacy_when_configured(tmp_path: Path):
+    _write_config(tmp_path, ":file/name-format :legacy")
+    target = target_path_for_write(str(tmp_path), "Kz/CareerPath")
+    assert target == (tmp_path / "pages" / "Kz%2FCareerPath.md").resolve()
 
 
 # ── draw_name_to_filename ────────────────────────────────────────────────────
