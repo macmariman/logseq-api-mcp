@@ -15,6 +15,7 @@ _EXPECTED = sorted(
         "delete_page",
         "edit_block",
         "find_pages_by_property",
+        "fs_append",
         "fs_read_excalidraw",
         "fs_read_page",
         "fs_write_excalidraw",

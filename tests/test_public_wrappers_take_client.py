@@ -29,6 +29,7 @@ _WRAPPERS_TO_AUDIT = [
     "delete_block",
     "edit_block",
     "set_block_properties",
+    "fs_append",
     "fs_read_page",
     "fs_write_page",
     "fs_read_excalidraw",

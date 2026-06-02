@@ -7,6 +7,7 @@ from src.client.logseq_client import LogseqClient
 from src.client.config import LogseqConfig
 from src.parser.markdown import parse_content
 from src.logging_setup import get_logger
+from src.tools._marker import hidden
 
 
 _log = get_logger(__name__)
@@ -112,6 +113,9 @@ def _format_summary(page_name: str, actions: list[str]) -> str:
     return "\n".join(lines)
 
 
+# Hidden: file-mode-only setup; fs_write_page + fs_append cover page edits
+# without the per-block API path. Reactivate for DB-mode/remote graphs.
+@hidden
 async def update_page(
     client: LogseqClient,
     config: LogseqConfig,

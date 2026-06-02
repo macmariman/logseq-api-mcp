@@ -175,3 +175,5 @@ cython_debug/
 
 # Cursor
 .cursor
+# macOS
+.DS_Store
