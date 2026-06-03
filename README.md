@@ -6,7 +6,6 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 [![CI](https://github.com/gustavo-meilus/logseq-api-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/gustavo-meilus/logseq-api-mcp/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-345%20passing-brightgreen)]()
 [![Stars](https://img.shields.io/github/stars/gustavo-meilus/logseq-api-mcp?style=social)](https://github.com/gustavo-meilus/logseq-api-mcp/stargazers)
 
 <picture>

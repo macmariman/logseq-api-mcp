@@ -234,6 +234,14 @@ class FakeLogseqClient(LogseqClient):
 | `tests/privacy/` | `filter_pages()`, tool-level exclusion | `FakeLogseqClient` |
 | `tests/tools/` | Individual tool `_run()` functions | `FakeLogseqClient` |
 
+### Skill docs (`.claude/skills/logseq/`)
+
+The bundled Logseq skill is plain markdown. `tests/test_skill_docs.py` guards it: every
+tool name it documents must exist in `tools.__all__`, and every internal `*.md`
+cross-reference must resolve. **If you rename or remove a tool, update the skill docs
+too** or this test fails. When documenting a new tool *parameter* inline, add it to
+`_NON_TOOL_IDENTIFIERS` in that test (parameter names look like tool names but aren't).
+
 ### TDD Invariants
 
 - `uv run --group test pytest tests/ -v` — must be **fully green** after every commit.

@@ -13,16 +13,17 @@ acting. Start lean; only pull in the topic you need.
 
 | Group | Tools | Use for |
 |-------|-------|---------|
-| Read | `get_all_pages`, `get_page_blocks`, `get_block_content`, `get_page_backlinks`, `get_linked_references`, `search`, `query`, `find_pages_by_property`, `get_pages_from_namespace` | Inspecting the graph |
-| Write (API) | `append_block_in_page`, `edit_block`, `insert_nested_block`, `rename_page`, `delete_page`, `delete_block` | Mutating via the Logseq HTTP API |
+| Read | `get_all_pages`, `get_page_blocks`, `get_all_page_content`, `get_block_content`, `get_page_backlinks`, `get_linked_references`, `get_linked_flashcards`, `search`, `query`, `find_pages_by_property`, `get_pages_from_namespace`, `get_pages_tree_from_namespace` | Inspecting the graph |
+| Write (API) | `create_page`, `append_block_in_page`, `insert_nested_block`, `edit_block`, `update_block`, `update_page`, `set_block_properties`, `rename_page`, `delete_page`, `delete_block` | Mutating via the Logseq HTTP API |
 | Filesystem (`fs_*`) | `fs_read_page`, `fs_write_page`, `fs_append`, `fs_read_excalidraw`, `fs_write_excalidraw` | Direct, atomic disk writes to a file-mode graph |
 
-**Journals & incremental capture:** prefer `fs_append` for adding blocks to a page
-or journal — it appends without rewriting the file (low conflict) and creates the
-file if missing. Journals can't be reached by the API write tools via their
-`yyyy_mm_dd` filename (the HTTP API addresses them by display title), so use
-`fs_append` (or `fs_write_page` for a full rewrite) for journal edits. Always
-`fs_read_page` immediately before a full rewrite and overwrite the complete content.
+This table is an **inventory**. To pick the right tool for a goal — and to tell apart
+overlapping read tools (e.g. `get_linked_references` vs `get_page_backlinks`) — read
+**`references/conventions/tool-selection.md`**.
+
+**Journals & incremental capture:** journals can't be reached by the API write tools
+(addressed by display title, not `yyyy_mm_dd`), so use `fs_append` for incremental
+journal edits. Full read/write decision in `references/conventions/tool-selection.md`.
 
 ## File-mode vs DB-mode (important)
 
@@ -35,6 +36,12 @@ If you are unsure which mode applies, check whether `fs_read_page` works before 
 
 ## Topics
 
+### Choosing the right tool
+Given a goal, which MCP tool to reach for — the discovery→resolve pattern, how
+overlapping read tools differ (`get_linked_references` vs `get_page_backlinks`),
+API vs `fs_*` for writes, and read/write decision tables — **read
+`references/conventions/tool-selection.md`**.
+
 ### Excalidraw diagrams
 To create or edit a diagram, **read `references/excalidraw/methodology.md` first** and follow its
 full workflow (design → write via `fs_write_excalidraw` → render & validate → fix). It covers the
@@ -46,3 +53,9 @@ For how to structure a graph well — journals-first capture, outliner/block dis
 pages vs tags vs links, references & embeds, `key:: value` properties, namespaces, and
 tasks/queries — **read `references/conventions/best-practices.md`**. Each practice maps to
 the MCP tool that applies. (File-mode / markdown; not the DB version.)
+
+### Tracking a long-running topic in journals
+When the user wants to *follow* a project/topic over many days (low-maintenance
+trace + collector page, durable-only properties, self-contained journal entries),
+**read `references/conventions/topic-tracking.md`** — a concrete application of the
+conventions above.
