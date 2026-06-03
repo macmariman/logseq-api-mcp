@@ -105,15 +105,21 @@ def _content_references_any(content: str, ref_strings: list[str]) -> bool:
     Bare hash refs (``#Tag``) are checked against content padded with a
     trailing space so that end-of-string tags are caught without false-
     positive prefix matches (``#meeting`` does not match ``#meetings``).
+
+    Matching is case-insensitive to mirror Logseq itself: ``[[Area/Topic]]``,
+    ``[[area/topic]]`` and ``[[AREA/TOPIC]]`` all resolve to the same page,
+    so a search for one must surface blocks written with any casing.
     """
-    padded = content + " "
+    lc = content.lower()
+    padded = lc + " "
     for s in ref_strings:
-        if s.startswith("#") and "[[" not in s:
+        s_lc = s.lower()
+        if s_lc.startswith("#") and "[[" not in s_lc:
             # Bare #Tag: require space immediately after to avoid prefix matches.
-            if (s + " ") in padded:
+            if (s_lc + " ") in padded:
                 return True
         else:
-            if s in content:
+            if s_lc in lc:
                 return True
     return False
 

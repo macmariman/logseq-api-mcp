@@ -527,3 +527,52 @@ async def test_tag_with_spaces_does_not_generate_bare_hashtag():
 
     # Neither [[Kz/Inn Hub]] nor #[[Kz/Inn Hub]] appears in content.
     assert "Found 0 references to [[Kz/Inn Hub]]" in text
+
+
+@pytest.mark.asyncio
+async def test_bracket_ref_matches_case_insensitively():
+    """``[[area/topic]]`` in content matches a search for ``Area/Topic``.
+
+    Logseq resolves page references case-insensitively, so the tool must
+    surface blocks regardless of the casing used in the block content.
+    """
+    client = _TreeClient(
+        trees_by_page={"p": [_block("u1", "- update on [[area/topic]] today")]},
+        refs_by_tag={"Area/Topic": [[_page("p")]]},
+    )
+    cfg = LogseqConfig(endpoint="http://x", token="t")
+
+    text = (await get_linked_references(client, cfg, "Area/Topic"))[0].text
+
+    assert "Found 1 reference to [[Area/Topic]]" in text
+    assert "update on" in text
+
+
+@pytest.mark.asyncio
+async def test_bare_hashtag_matches_case_insensitively():
+    """``#Meeting`` in content matches a search for ``meeting`` (and vice versa)."""
+    client = _TreeClient(
+        trees_by_page={"p": [_block("u1", "notes from #Meeting")]},
+        refs_by_tag={"meeting": [[_page("p")]]},
+    )
+    cfg = LogseqConfig(endpoint="http://x", token="t")
+
+    text = (await get_linked_references(client, cfg, "meeting"))[0].text
+
+    assert "Found 1 reference to [[meeting]]" in text
+    assert "notes from" in text
+
+
+@pytest.mark.asyncio
+async def test_case_insensitive_match_keeps_prefix_guard():
+    """Case-insensitivity must not weaken the bare-hashtag prefix guard:
+    ``#Meetings`` must still NOT match a search for ``meeting``."""
+    client = _TreeClient(
+        trees_by_page={"p": [_block("u1", "attending #Meetings today")]},
+        refs_by_tag={"meeting": [[_page("p")]]},
+    )
+    cfg = LogseqConfig(endpoint="http://x", token="t")
+
+    text = (await get_linked_references(client, cfg, "meeting"))[0].text
+
+    assert "Found 0 references to [[meeting]]" in text
